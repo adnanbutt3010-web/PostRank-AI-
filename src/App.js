@@ -112,9 +112,22 @@ If you're looking for the best ${title} in 2025, look no further. At ${price}, i
   const snippet = metaDescription.slice(0, 150);
 
   // ── Alt Texts ──
-  const altTexts = isBlog
-    ? [`${title} - Featured Image`, `${title} Guide 2025 - Tips`, `Best ${title} - Comparison`, `${title} - How To Use`, `${title} Review - Expert Opinion`]
-    : [`${title} - Front View - ${price}`, `${title} - Side View - Best Quality`, `${title} - Detail Shot - Premium`, `${title} - Lifestyle Photo`, `Buy ${title} Online - ${price}`];
+  // Smart SEO Alt Texts
+  const productAltTemplates = [
+    `${title} ${isLocal ? "Pakistan" : ""} - Buy Online ${price}`.trim(),
+    `${title} Best Quality - ${isLocal ? "Pakistan Delivery" : "Worldwide Shipping"}`,
+    `${title} Premium - ${keywords[0]} - ${price}`,
+    `${title} ${isLocal ? "Cash on Delivery Pakistan" : "Free Shipping"} - Shop Now`,
+    `Buy ${title} Online ${price} - ${isLocal ? "Karachi Lahore Islamabad" : "Best Deal 2025"}`,
+  ];
+  const blogAltTemplates = [
+    `${title} Complete Guide 2025 - Featured`,
+    `Best ${title} Tips - ${isLocal ? "Pakistan" : "Expert Guide"}`,
+    `${title} Review - Pros and Cons`,
+    `How to Choose ${title} - Step by Step`,
+    `${title} Comparison - Top Picks ${new Date().getFullYear()}`,
+  ];
+  const altTexts = isBlog ? blogAltTemplates : productAltTemplates;
 
   // ── Permalink ──
   const permalink = isBlog
@@ -170,28 +183,33 @@ async function publishToWordPress(siteUrl, username, appPassword, postData) {
 }
 
 // ─── SHOPIFY PUBLISHER ────────────────────────────────────────────────────────
-async function publishToShopify(shopDomain, accessToken, postData) {
+async function publishToShopify(shopDomain, accessToken, postData, images = [], imageAlts = []) {
   const url = `https://${shopDomain}/admin/api/2024-01/products.json`;
-  
+
+  // Convert images to base64 for Shopify
+  const shopifyImages = await Promise.all(images.map(async (img, i) => {
+    const alt = imageAlts[i]?.alt || postData.seoTitle;
+    return new Promise(resolve => {
+      const reader = new FileReader();
+      reader.onload = e => resolve({ attachment: e.target.result.split(",")[1], alt, filename: img.name });
+      reader.readAsDataURL(img.file);
+    });
+  }));
+
   const res = await fetch(url, {
     method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      "X-Shopify-Access-Token": accessToken,
-    },
+    headers: { "Content-Type": "application/json", "X-Shopify-Access-Token": accessToken },
     body: JSON.stringify({
       product: {
         title: postData.seoTitle,
-        body_html: `<p>${postData.description}</p>`,
+        body_html: `<p>${postData.description.replace(/
+/g, "</p><p>")}</p><p><strong>Price: ${postData.price}</strong></p><p><em>${postData.cta}</em></p>`,
         vendor: shopDomain.split(".")[0],
         product_type: postData.product || "General",
         tags: postData.keywords?.join(", ") || "",
         status: "active",
-        variants: [{
-          price: postData.price?.replace(/[^0-9.]/g, "") || "0",
-          inventory_management: "shopify",
-          inventory_quantity: 100,
-        }],
+        variants: [{ price: postData.price?.replace(/[^0-9.]/g, "") || "0", inventory_management: "shopify", inventory_quantity: 100 }],
+        images: shopifyImages.length > 0 ? shopifyImages : [],
         metafields: [
           { namespace: "seo", key: "title", value: postData.seoTitle, type: "single_line_text_field" },
           { namespace: "seo", key: "description", value: postData.metaDescription, type: "single_line_text_field" },
@@ -199,9 +217,8 @@ async function publishToShopify(shopDomain, accessToken, postData) {
       },
     }),
   });
-  
   const data = await res.json();
-  if (!res.ok) throw new Error(data.errors || "Shopify publish failed");
+  if (!res.ok) throw new Error(JSON.stringify(data.errors) || "Shopify publish failed");
   return { url: `https://${shopDomain}/products/${data.product?.handle}`, id: data.product?.id };
 }
 
@@ -431,6 +448,8 @@ export default function PostRankAI() {
   const [productPrice, setProductPrice] = useState("");
   const [seoType, setSeoType] = useState("local");
   const [postType, setPostType] = useState("product");
+  const [uploadedImages, setUploadedImages] = useState([]);
+  const [imageAlts, setImageAlts] = useState([]);
   const [generating, setGenerating] = useState(false);
   const [generated, setGenerated] = useState(null);
   const [error, setError] = useState("");
@@ -471,7 +490,7 @@ export default function PostRankAI() {
 
   const handleGenerate = async () => {
     if (!productTitle.trim() || !productPrice.trim()) { setError("Product title aur price dono enter karein."); return; }
-    setError(""); setGenerating(true); setGenerated(null); setSaved(false); setPublished(false);
+    setError(""); setGenerating(true); setGenerated(null); setSaved(false); setPublished(false); setUploadedImages([]); setImageAlts([]);
     try {
       const r = await generateSEOPost(productTitle, productPrice, seoType, postType);
       setGenerated({ ...r, product: productTitle, price: productPrice });
@@ -521,11 +540,11 @@ export default function PostRankAI() {
       let result;
       if (client.platform === "wordpress") {
         if (!client.wpUser || !client.wpPassword) throw new Error("WordPress username aur App Password enter karo (Client edit karo)");
-        result = await publishToWordPress(client.website, client.wpUser, client.wpPassword, { ...generated, price: productPrice });
+        result = await publishToWordPress(client.website, client.wpUser, client.wpPassword, { ...generated, price: productPrice }, uploadedImages, imageAlts);
         notify(`✅ WordPress par publish ho gaya! Post ID: ${result.id}`);
       } else if (client.platform === "shopify") {
         if (!client.shopifyUrl || !client.shopifyKey) throw new Error("Shopify URL aur Access Token enter karo (Client edit karo)");
-        result = await publishToShopify(client.shopifyUrl, client.shopifyKey, { ...generated, price: productPrice });
+        result = await publishToShopify(client.shopifyUrl, client.shopifyKey, { ...generated, price: productPrice }, uploadedImages, imageAlts);
         notify(`✅ Shopify par publish ho gaya! Product ID: ${result.id}`);
       }
       setPublishResult(result);
@@ -659,15 +678,95 @@ export default function PostRankAI() {
                   <div className="rf full"><div className="rf-label">📌 Snippet (150 chars)</div><div className="rf-val" style={{fontSize:12,color:"#475569"}}>{generated.snippet}</div></div>
                   <div className="rf full"><div className="rf-label">🔗 Custom Permalink</div><div className="rf-val" style={{color:"#6366f1",fontSize:12,wordBreak:"break-all"}}>{generated.permalink}</div></div>
                   <div className="rf full">
-                    <div className="rf-label">🖼 Image Alt Texts</div>
-                    <div style={{display:"flex",flexDirection:"column",gap:6}}>
-                      {generated.altTexts?.map((alt,i)=>(
-                        <div key={i} style={{background:"var(--bg)",border:"1px solid var(--border)",borderRadius:7,padding:"8px 12px",fontSize:12,color:"var(--ink2)",display:"flex",alignItems:"center",gap:8}}>
-                          <span style={{background:"#6366f1",color:"white",borderRadius:4,padding:"2px 7px",fontSize:10,fontWeight:700}}>IMG {i+1}</span>
-                          {alt}
-                        </div>
-                      ))}
+                    <div className="rf-label">🖼 Images + SEO Alt Texts</div>
+
+                    {/* Image Upload Area */}
+                    <div style={{background:"var(--bg)",border:"2px dashed #c7d2fe",borderRadius:10,padding:"16px",marginBottom:12,textAlign:"center"}}>
+                      <input type="file" accept="image/*" multiple id="imgUpload" style={{display:"none"}}
+                        onChange={e=>{
+                          const files = Array.from(e.target.files);
+                          const previews = files.map((f,i)=>({
+                            file: f,
+                            url: URL.createObjectURL(f),
+                            name: f.name,
+                            alt: generated.altTexts?.[i] || `${generated.product} - Image ${i+1} - Buy Online`,
+                            title: `${generated.product} - ${generated.price}`,
+                          }));
+                          setUploadedImages(prev=>[...prev,...previews]);
+                          setImageAlts(prev=>[...prev,...previews.map(p=>({alt:p.alt,title:p.title}))]);
+                        }}
+                      />
+                      <label htmlFor="imgUpload" style={{cursor:"pointer",display:"block"}}>
+                        <div style={{fontSize:28,marginBottom:6}}>📁</div>
+                        <div style={{fontSize:13,fontWeight:600,color:"#6366f1"}}>Images Upload Karo</div>
+                        <div style={{fontSize:11,color:"var(--muted)",marginTop:3}}>JPG, PNG, WEBP — Multiple images select kar sakte ho</div>
+                      </label>
                     </div>
+
+                    {/* Uploaded Images with Alt Text Editor */}
+                    {uploadedImages.length > 0 ? (
+                      <div style={{display:"flex",flexDirection:"column",gap:10}}>
+                        {uploadedImages.map((img,i)=>(
+                          <div key={i} style={{background:"var(--bg)",border:"1px solid var(--border)",borderRadius:10,padding:"12px",display:"flex",gap:12,alignItems:"flex-start"}}>
+                            <div style={{position:"relative",flexShrink:0}}>
+                              <img src={img.url} alt={img.alt} style={{width:70,height:70,objectFit:"cover",borderRadius:8,border:"1px solid var(--border)"}} />
+                              <span style={{position:"absolute",top:-6,left:-6,background:"#6366f1",color:"white",borderRadius:4,padding:"1px 6px",fontSize:9,fontWeight:700}}>IMG {i+1}</span>
+                            </div>
+                            <div style={{flex:1,display:"flex",flexDirection:"column",gap:6}}>
+                              <div>
+                                <div style={{fontSize:9,color:"var(--muted)",textTransform:"uppercase",letterSpacing:"1px",marginBottom:3,fontWeight:600}}>SEO Alt Text</div>
+                                <input
+                                  value={imageAlts[i]?.alt || img.alt}
+                                  onChange={e=>{
+                                    const updated = [...imageAlts];
+                                    if(!updated[i]) updated[i] = {alt:"",title:""};
+                                    updated[i].alt = e.target.value;
+                                    setImageAlts(updated);
+                                  }}
+                                  style={{width:"100%",background:"white",border:"1.5px solid var(--border)",borderRadius:7,padding:"7px 10px",fontSize:12,fontFamily:"Inter,sans-serif",color:"var(--ink)",outline:"none"}}
+                                  placeholder="SEO alt text likhein..."
+                                />
+                              </div>
+                              <div>
+                                <div style={{fontSize:9,color:"var(--muted)",textTransform:"uppercase",letterSpacing:"1px",marginBottom:3,fontWeight:600}}>Image Title Text</div>
+                                <input
+                                  value={imageAlts[i]?.title || img.title}
+                                  onChange={e=>{
+                                    const updated = [...imageAlts];
+                                    if(!updated[i]) updated[i] = {alt:"",title:""};
+                                    updated[i].title = e.target.value;
+                                    setImageAlts(updated);
+                                  }}
+                                  style={{width:"100%",background:"white",border:"1.5px solid var(--border)",borderRadius:7,padding:"7px 10px",fontSize:12,fontFamily:"Inter,sans-serif",color:"var(--ink)",outline:"none"}}
+                                  placeholder="Image title likhein..."
+                                />
+                              </div>
+                              <div style={{fontSize:10,color:"#22c55e",fontWeight:500}}>✓ Auto-publish par website par upload ho jayegi</div>
+                            </div>
+                            <button onClick={()=>{
+                              setUploadedImages(prev=>prev.filter((_,idx)=>idx!==i));
+                              setImageAlts(prev=>prev.filter((_,idx)=>idx!==i));
+                            }} style={{background:"#fff1f2",border:"none",borderRadius:6,padding:"4px 8px",color:"#f43f5e",cursor:"pointer",fontSize:12,flexShrink:0}}>✕</button>
+                          </div>
+                        ))}
+                        <div style={{background:"#f0fdf4",border:"1px solid #86efac",borderRadius:8,padding:"10px 14px",fontSize:11,color:"#166534"}}>
+                          ✅ <strong>{uploadedImages.length} image{uploadedImages.length>1?"s":""}</strong> ready — WordPress/Shopify publish par automatically upload ho jayengi alt texts ke saath!
+                        </div>
+                      </div>
+                    ) : (
+                      <div style={{display:"flex",flexDirection:"column",gap:6}}>
+                        <div style={{fontSize:11,color:"var(--muted)",marginBottom:4}}>📋 Auto-generated SEO Alt Texts (image upload karne par replace ho jayenge):</div>
+                        {generated.altTexts?.map((alt,i)=>(
+                          <div key={i} style={{background:"var(--bg)",border:"1px solid var(--border)",borderRadius:7,padding:"8px 12px",fontSize:12,color:"var(--ink2)",display:"flex",alignItems:"center",gap:8}}>
+                            <span style={{background:"#6366f1",color:"white",borderRadius:4,padding:"2px 7px",fontSize:10,fontWeight:700,flexShrink:0}}>IMG {i+1}</span>
+                            <div>
+                              <div style={{fontWeight:500}}>{alt}</div>
+                              <div style={{fontSize:10,color:"var(--muted)",marginTop:1}}>Title: {generated.product} - {generated.price}</div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
                   </div>
                   <div className="rf full">
                     <div className="rf-label">📋 Copy All & Publish Info</div>
