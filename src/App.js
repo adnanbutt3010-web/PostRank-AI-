@@ -15,56 +15,194 @@ const SUPABASE_URL = "https://yizzvwyvdnkbbhvojqlp.supabase.co";
 const SUPABASE_ANON_KEY = "sb_publishable_Bz5xRPDQ_ZDE99T_QRSLlg_UKLH-6b6";
 const GEMINI_API_KEY = "AQ.Ab8RN6IZvRvyQzdKoF-H270pZtInggpt1flUcsC377CqXpIBSA";
 
-// ─── AI GENERATOR (Smart Local + API) ─────────────────────────────────────────
-async function generateSEOPost(productTitle, productPrice) {
-  // Smart SEO generation - works without any API key
+// ─── AI GENERATOR (Enhanced SEO) ─────────────────────────────────────────────
+async function generateSEOPost(productTitle, productPrice, seoType = "local", postType = "product") {
   const title = productTitle.trim();
   const price = productPrice.trim();
   const titleLower = title.toLowerCase();
   const words = title.split(" ");
-  
-  // Generate smart keywords based on product
-  const keywords = [
-    titleLower,
-    `buy ${titleLower}`,
-    `${titleLower} online`,
-    `best ${titleLower}`,
-    `${titleLower} ${price}`,
-  ];
-  
-  // Generate hashtags
-  const hashtags = words.map(w => `#${w.charAt(0).toUpperCase() + w.slice(1)}`);
-  hashtags.push("#OnlineShopping", "#BestPrice", "#ShopNow");
-  
-  // SEO Title
-  const seoTitle = `${title} – Best Price ${price} | Buy Online Now`;
-  
-  // Description
-  const description = `Introducing the ${title}, now available at an unbeatable price of just ${price}! Whether you're looking for quality, style, or value, the ${title} delivers on all fronts. Crafted with premium materials and designed for everyday use, this product stands out from the competition. Don't miss this incredible deal — the ${title} at ${price} is flying off the shelves. Order today and experience the difference that quality makes. Fast shipping, easy returns, and 100% customer satisfaction guaranteed.`;
-  
-  // Meta Description
-  const metaDescription = `Shop ${title} for only ${price}. Premium quality, fast delivery & easy returns. Limited stock available — order now!`;
-  
-  // CTA
-  const ctas = [
-    `Order Now – Only ${price}!`,
-    `Get Yours Today for ${price}!`,
-    `Shop Now – Limited Stock at ${price}!`,
-    `Buy ${title} for ${price} – Fast Delivery!`,
-  ];
+  const slug = title.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "");
+
+  const isLocal = seoType === "local";
+  const isBlog = postType === "blog";
+
+  // ── Keywords ──
+  const keywords = isLocal
+    ? [titleLower, `buy ${titleLower}`, `${titleLower} price in pakistan`, `${titleLower} online pakistan`, `cheap ${titleLower} pakistan`]
+    : [titleLower, `buy ${titleLower} online`, `best ${titleLower}`, `${titleLower} for sale`, `${titleLower} shop`];
+
+  const blogKeywords = isLocal
+    ? [`${titleLower} guide`, `${titleLower} tips pakistan`, `best ${titleLower} 2025`, `${titleLower} review`, `how to choose ${titleLower}`]
+    : [`${titleLower} guide`, `best ${titleLower} 2025`, `${titleLower} review`, `how to buy ${titleLower}`, `${titleLower} tips`];
+
+  // ── Hashtags ──
+  const baseHashtags = words.map(w => "#" + w.charAt(0).toUpperCase() + w.slice(1));
+  const localTags = [...baseHashtags, "#PakistanShopping", "#OnlineShoppingPK"].slice(0,6);
+  const intlTags = [...baseHashtags, "#OnlineShopping", "#BestPrice", "#ShopNow"].slice(0,6);
+  const blogTags = isLocal
+    ? [...baseHashtags, "#PakistanBlog", "#TechPakistan", "#BloggingPK"].slice(0,6)
+    : [...baseHashtags, "#Blog", "#HowTo", "#Guide2025"].slice(0,6);
+
+  // ── SEO Title ──
+  const seoTitle = isBlog
+    ? (isLocal ? `${title} – Mukammal Guide 2025 | Pakistan` : `${title} – Complete Guide 2025 | Best Tips`)
+    : (isLocal ? `${title} – Best Price ${price} in Pakistan | Order Online` : `${title} – ${price} | Best Online Deal | Free Shipping`);
+
+  // ── Description ──
+  const productDescLocal = `Introducing the ${title}, now available at an unbeatable price of just ${price} across Pakistan! Whether you're based in Karachi, Lahore, Islamabad, or anywhere else in the country, we bring this premium product right to your doorstep.
+
+The ${title} is crafted with high-quality materials, designed to meet the everyday needs of Pakistani consumers. It combines durability, style, and functionality — all at a price that won't break the bank. Whether you're buying for yourself or as a gift, the ${title} is the perfect choice.
+
+Our customers across Pakistan love the ${title} for its outstanding performance and value. At just ${price}, it offers everything you need without compromising on quality. We provide fast nationwide delivery, easy returns, and 100% customer satisfaction guarantee.
+
+Don't miss this amazing offer — the ${title} at ${price} is in high demand. Order now through our website and get it delivered to your door within 2-5 business days anywhere in Pakistan. Cash on delivery available. Limited stock — order today!`;
+
+  const productDescIntl = `Discover the ${title}, now available worldwide at the incredible price of just ${price}! Designed for global customers who demand quality, style, and value, the ${title} is your perfect everyday companion.
+
+Engineered with premium materials and built to last, the ${title} delivers outstanding performance across all use cases. Whether you're shopping from the US, UK, UAE, Canada, or anywhere around the world, we ship directly to your location with fast, reliable international shipping.
+
+Our global customers rave about the ${title} for its superior build quality and exceptional value at ${price}. Join thousands of satisfied customers worldwide who have made the smart choice. We offer hassle-free returns, secure payment options, and world-class customer support.
+
+Order your ${title} today for just ${price} and experience premium quality delivered to your door. Free international shipping on qualifying orders. 30-day money-back guarantee. Don't wait — limited stock available worldwide!`;
+
+  const blogDescLocal = `کیا آپ ${title} کے بارے میں مکمل معلومات چاہتے ہیں؟ آپ بالکل صحیح جگہ آئے ہیں!
+
+${title} آج کل پاکستان میں بہت مقبول ہے۔ اس گائیڈ میں ہم آپ کو ${title} کے بارے میں تمام ضروری معلومات دیں گے — فوائد، نقصانات، قیمت، اور خریداری کے بہترین طریقے۔
+
+**${title} کیا ہے؟**
+${title} ایک بہترین انتخاب ہے جو آپ کی روزمرہ کی ضروریات پوری کرتا ہے۔ پاکستان میں اس کی قیمت ${price} سے شروع ہوتی ہے جو کہ بہت مناسب ہے۔
+
+**${title} کے فوائد:**
+- اعلیٰ معیار اور دیرپا ساخت
+- پاکستان میں آسانی سے دستیاب
+- بہترین قیمت ${price} میں
+- تیز ڈیلیوری پورے پاکستان میں
+
+**خریداری کا بہترین طریقہ:**
+ہمیشہ قابل اعتماد آن لائن اسٹور سے خریداری کریں اور قیمتوں کا موازنہ کریں۔ ${title} کو ${price} میں حاصل کرنے کا یہ بہترین موقع ہے!`;
+
+  const blogDescIntl = `Looking for the ultimate guide on ${title}? You've come to the right place!
+
+In this comprehensive guide, we'll cover everything you need to know about ${title} — from its key features and benefits to buying tips and expert recommendations for 2025.
+
+**What is ${title}?**
+The ${title} has taken the market by storm, offering unmatched quality and value at just ${price}. Whether you're a first-time buyer or looking to upgrade, this guide will help you make the best decision.
+
+**Top Benefits of ${title}:**
+- Premium build quality that lasts for years
+- Excellent value at just ${price}
+- Available worldwide with fast shipping
+- Trusted by thousands of satisfied customers globally
+
+**How to Choose the Best ${title}:**
+When shopping for ${title}, always consider quality, price, and seller reputation. At ${price}, our recommended option delivers on all three fronts.
+
+**Final Verdict:**
+If you're looking for the best ${title} in 2025, look no further. At ${price}, it offers everything you need and more. Order yours today and experience the difference!`;
+
+  const description = isBlog
+    ? (isLocal ? blogDescLocal : blogDescIntl)
+    : (isLocal ? productDescLocal : productDescIntl);
+
+  // ── Meta / Snippet ──
+  const metaDescription = isBlog
+    ? (isLocal ? `${title} ki mukammal guide 2025. Pakistan mein best ${titleLower} kaise khridein. Tips, reviews aur qeemat.` : `Complete guide to ${title} in 2025. Tips, reviews, best prices and buying advice from experts.`)
+    : (isLocal ? `Buy ${title} for ${price} in Pakistan. Fast delivery nationwide. Cash on delivery available. Premium quality guaranteed!` : `Shop ${title} for ${price}. Worldwide shipping. 30-day returns. Best price online. Order now!`);
+
+  const snippet = metaDescription.slice(0, 150);
+
+  // ── Alt Texts ──
+  const altTexts = isBlog
+    ? [`${title} - Featured Image`, `${title} Guide 2025 - Tips`, `Best ${title} - Comparison`, `${title} - How To Use`, `${title} Review - Expert Opinion`]
+    : [`${title} - Front View - ${price}`, `${title} - Side View - Best Quality`, `${title} - Detail Shot - Premium`, `${title} - Lifestyle Photo`, `Buy ${title} Online - ${price}`];
+
+  // ── Permalink ──
+  const permalink = isBlog
+    ? (isLocal ? `https://yoursite.com/blog/${slug}-guide-pakistan` : `https://yoursite.com/blog/${slug}-complete-guide-2025`)
+    : (isLocal ? `https://yourstore.com/products/${slug}-pakistan` : `https://yourstore.com/products/${slug}`);
+
+  // ── CTA ──
+  const ctas = isBlog
+    ? [`Puri Guide Parhen →`, `Learn More About ${title} →`, `Read Full Review →`]
+    : (isLocal
+      ? [`ابھی آرڈر کریں – صرف ${price}!`, `Order Now – Only ${price}!`, `Buy Now – Cash on Delivery!`]
+      : [`Order Now – Only ${price}!`, `Get Yours Today!`, `Shop Now – Free Shipping!`]);
   const cta = ctas[Math.floor(Math.random() * ctas.length)];
-  
-  // Simulate a small delay like an API call
-  await new Promise(resolve => setTimeout(resolve, 1200));
-  
+
+  await new Promise(r => setTimeout(r, 1200));
+
   return {
-    seoTitle,
-    description,
-    metaDescription,
-    keywords: keywords.slice(0, 5),
-    hashtags: hashtags.slice(0, 5),
-    cta,
+    seoTitle, description, metaDescription, snippet,
+    keywords: isBlog ? blogKeywords : keywords,
+    hashtags: isBlog ? blogTags : (isLocal ? localTags : intlTags),
+    altTexts, permalink, cta, seoType, postType
   };
+}
+
+// ─── WORDPRESS PUBLISHER ──────────────────────────────────────────────────────
+async function publishToWordPress(siteUrl, username, appPassword, postData) {
+  const url = siteUrl.replace(/\/$/, "") + "/wp-json/wp/v2/posts";
+  const credentials = btoa(`${username}:${appPassword}`);
+  
+  const res = await fetch(url, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "Authorization": `Basic ${credentials}`,
+    },
+    body: JSON.stringify({
+      title: postData.seoTitle,
+      content: `<p>${postData.description}</p>\n\n<p><strong>Price:</strong> ${postData.price}</p>\n\n<p><em>${postData.cta}</em></p>`,
+      excerpt: postData.metaDescription,
+      status: "publish",
+      slug: postData.permalink?.split("/products/")?.[1] || postData.seoTitle.toLowerCase().replace(/[^a-z0-9]+/g, "-"),
+      meta: {
+        _yoast_wpseo_metadesc: postData.metaDescription,
+        _yoast_wpseo_focuskw: postData.keywords?.[0] || "",
+      },
+      tags: [],
+    }),
+  });
+  
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.message || "WordPress publish failed");
+  return { url: data.link, id: data.id };
+}
+
+// ─── SHOPIFY PUBLISHER ────────────────────────────────────────────────────────
+async function publishToShopify(shopDomain, accessToken, postData) {
+  const url = `https://${shopDomain}/admin/api/2024-01/products.json`;
+  
+  const res = await fetch(url, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "X-Shopify-Access-Token": accessToken,
+    },
+    body: JSON.stringify({
+      product: {
+        title: postData.seoTitle,
+        body_html: `<p>${postData.description}</p>`,
+        vendor: shopDomain.split(".")[0],
+        product_type: postData.product || "General",
+        tags: postData.keywords?.join(", ") || "",
+        status: "active",
+        variants: [{
+          price: postData.price?.replace(/[^0-9.]/g, "") || "0",
+          inventory_management: "shopify",
+          inventory_quantity: 100,
+        }],
+        metafields: [
+          { namespace: "seo", key: "title", value: postData.seoTitle, type: "single_line_text_field" },
+          { namespace: "seo", key: "description", value: postData.metaDescription, type: "single_line_text_field" },
+        ],
+      },
+    }),
+  });
+  
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.errors || "Shopify publish failed");
+  return { url: `https://${shopDomain}/products/${data.product?.handle}`, id: data.product?.id };
 }
 
 // ─── SUPABASE HELPER ──────────────────────────────────────────────────────────
@@ -281,9 +419,9 @@ const S = `
 
 // ─── MOCK CLIENTS ─────────────────────────────────────────────────────────────
 const MOCK_CLIENTS = [
-  { id: 1, name: "Alex Store", email: "alex@store.com", website: "alexstore.com", plan: "Pro", status: "active", posts: 47, joined: "Jan 2025" },
-  { id: 2, name: "Priya Boutique", email: "priya@boutique.in", website: "priyaboutique.in", plan: "Agency", status: "active", posts: 132, joined: "Feb 2025" },
-  { id: 3, name: "Marcus Shop", email: "marcus@shop.io", website: "marcusshop.io", plan: "Basic", status: "disabled", posts: 9, joined: "Mar 2025" },
+  { id: 1, name: "Alex Store", email: "alex@store.com", website: "https://alexstore.com", plan: "Pro", status: "active", posts: 47, joined: "Jan 2025", platform: "wordpress", wpUser: "admin", wpPassword: "", shopifyUrl: "", shopifyKey: "" },
+  { id: 2, name: "Priya Boutique", email: "priya@boutique.in", website: "https://priyaboutique.myshopify.com", plan: "Agency", status: "active", posts: 132, joined: "Feb 2025", platform: "shopify", wpUser: "", wpPassword: "", shopifyUrl: "priyaboutique.myshopify.com", shopifyKey: "" },
+  { id: 3, name: "Marcus Shop", email: "marcus@shop.io", website: "https://marcusshop.io", plan: "Basic", status: "disabled", posts: 9, joined: "Mar 2025", platform: "wordpress", wpUser: "", wpPassword: "", shopifyUrl: "", shopifyKey: "" },
 ];
 
 // ─── APP ──────────────────────────────────────────────────────────────────────
@@ -291,6 +429,8 @@ export default function PostRankAI() {
   const [view, setView] = useState("generate");
   const [productTitle, setProductTitle] = useState("");
   const [productPrice, setProductPrice] = useState("");
+  const [seoType, setSeoType] = useState("local");
+  const [postType, setPostType] = useState("product");
   const [generating, setGenerating] = useState(false);
   const [generated, setGenerated] = useState(null);
   const [error, setError] = useState("");
@@ -304,7 +444,11 @@ export default function PostRankAI() {
 
   const [clients, setClients] = useState(MOCK_CLIENTS);
   const [showAddClient, setShowAddClient] = useState(false);
-  const [newClient, setNewClient] = useState({ name: "", email: "", website: "", plan: "Basic" });
+  const [newClient, setNewClient] = useState({ name: "", email: "", website: "", plan: "Basic", platform: "wordpress", wpUser: "", wpPassword: "", shopifyUrl: "", shopifyKey: "" });
+  const [showPublishModal, setShowPublishModal] = useState(false);
+  const [publishTarget, setPublishTarget] = useState(null);
+  const [publishing2, setPublishing2] = useState(false);
+  const [publishResult, setPublishResult] = useState(null);
 
   const [toast, setToast] = useState(null);
   const [toastErr, setToastErr] = useState(false);
@@ -329,7 +473,7 @@ export default function PostRankAI() {
     if (!productTitle.trim() || !productPrice.trim()) { setError("Product title aur price dono enter karein."); return; }
     setError(""); setGenerating(true); setGenerated(null); setSaved(false); setPublished(false);
     try {
-      const r = await generateSEOPost(productTitle, productPrice);
+      const r = await generateSEOPost(productTitle, productPrice, seoType, postType);
       setGenerated({ ...r, product: productTitle, price: productPrice });
     } catch (e) {
       setError("AI generation failed: " + e.message + " — Please check Gemini API key.");
@@ -367,6 +511,31 @@ export default function PostRankAI() {
     finally { setPublishing(false); }
   };
 
+  const handleDirectPublish = async (client) => {
+    if (!generated) { notify("Pehle post generate karo!", true); return; }
+    setPublishTarget(client);
+    setShowPublishModal(false);
+    setPublishing2(true);
+    setPublishResult(null);
+    try {
+      let result;
+      if (client.platform === "wordpress") {
+        if (!client.wpUser || !client.wpPassword) throw new Error("WordPress username aur App Password enter karo (Client edit karo)");
+        result = await publishToWordPress(client.website, client.wpUser, client.wpPassword, { ...generated, price: productPrice });
+        notify(`✅ WordPress par publish ho gaya! Post ID: ${result.id}`);
+      } else if (client.platform === "shopify") {
+        if (!client.shopifyUrl || !client.shopifyKey) throw new Error("Shopify URL aur Access Token enter karo (Client edit karo)");
+        result = await publishToShopify(client.shopifyUrl, client.shopifyKey, { ...generated, price: productPrice });
+        notify(`✅ Shopify par publish ho gaya! Product ID: ${result.id}`);
+      }
+      setPublishResult(result);
+    } catch(e) {
+      notify("Publish failed: " + e.message, true);
+    } finally {
+      setPublishing2(false);
+    }
+  };
+
   const toggleClient = (id) => {
     setClients(c => c.map(x => x.id === id ? { ...x, status: x.status === "active" ? "disabled" : "active" } : x));
   };
@@ -380,7 +549,7 @@ export default function PostRankAI() {
     if (!newClient.name || !newClient.email) { notify("Name aur email zaroor bharen.", true); return; }
     const c = { ...newClient, id: Date.now(), status: "active", posts: 0, joined: new Date().toLocaleDateString("en-US", { month: "short", year: "numeric" }) };
     setClients(prev => [c, ...prev]);
-    setNewClient({ name: "", email: "", website: "", plan: "Basic" });
+    setNewClient({ name: "", email: "", website: "", plan: "Basic", platform: "wordpress", wpUser: "", wpPassword: "", shopifyUrl: "", shopifyKey: "" });
     setShowAddClient(false);
     notify("✓ Client add ho gaya!");
   };
@@ -432,11 +601,21 @@ export default function PostRankAI() {
               <div className="page-sub">Product enter karo → AI sab kuch likhega → Save → Publish</div>
             </div>
             <div className="card-dark">
-              <div className="gen-title-text">Aaj kya sell kar rahe ho?</div>
+              <div className="gen-title-text">{postType === "blog" ? "Blog topic kya hai?" : "Aaj kya sell kar rahe ho?"}</div>
+              {/* Post Type Toggle */}
+              <div style={{display:"flex",gap:8,marginBottom:12}}>
+                <button onClick={()=>setPostType("product")} style={{padding:"8px 18px",borderRadius:8,border:"2px solid",borderColor:postType==="product"?"#6366f1":"#334155",background:postType==="product"?"#6366f1":"transparent",color:postType==="product"?"white":"#94a3b8",fontFamily:"Inter,sans-serif",fontWeight:600,fontSize:12,cursor:"pointer"}}>🛍 Product Post</button>
+                <button onClick={()=>setPostType("blog")} style={{padding:"8px 18px",borderRadius:8,border:"2px solid",borderColor:postType==="blog"?"#f59e0b":"#334155",background:postType==="blog"?"#f59e0b":"transparent",color:postType==="blog"?"white":"#94a3b8",fontFamily:"Inter,sans-serif",fontWeight:600,fontSize:12,cursor:"pointer"}}>📝 Blog Post</button>
+              </div>
+              {/* SEO Type Toggle */}
+              <div style={{display:"flex",gap:8,marginBottom:20}}>
+                <button onClick={()=>setSeoType("local")} style={{padding:"7px 16px",borderRadius:8,border:"none",background:seoType==="local"?"#273549":"#1a2535",color:seoType==="local"?"#a5b4fc":"#475569",fontFamily:"Inter,sans-serif",fontWeight:500,fontSize:11,cursor:"pointer"}}>🇵🇰 Local (Pakistan)</button>
+                <button onClick={()=>setSeoType("international")} style={{padding:"7px 16px",borderRadius:8,border:"none",background:seoType==="international"?"#273549":"#1a2535",color:seoType==="international"?"#a5b4fc":"#475569",fontFamily:"Inter,sans-serif",fontWeight:500,fontSize:11,cursor:"pointer"}}>🌍 International</button>
+              </div>
               <div className="gen-row">
                 <div className="gen-group">
                   <div className="gen-label">Product Title</div>
-                  <input className="gen-input" placeholder="e.g. Nike Running Shoes" value={productTitle} onChange={e => setProductTitle(e.target.value)} onKeyDown={e => e.key === "Enter" && handleGenerate()} />
+                  <input className="gen-input" placeholder={postType === "blog" ? "e.g. Best Sneakers in Pakistan" : "e.g. Nike Running Shoes"} value={productTitle} onChange={e => setProductTitle(e.target.value)} onKeyDown={e => e.key === "Enter" && handleGenerate()} />
                 </div>
                 <div className="gen-group" style={{ maxWidth: 170 }}>
                   <div className="gen-label">Price</div>
@@ -454,6 +633,8 @@ export default function PostRankAI() {
                 <div className="result-top">
                   <div className="result-top-left">
                     <span className="ai-badge">AI Generated</span>
+                    <span style={{background:generated.postType==="blog"?"#f59e0b":"#6366f1",color:"white",fontSize:10,fontWeight:600,padding:"3px 10px",borderRadius:20,textTransform:"uppercase",letterSpacing:"0.5px"}}>{generated.postType==="blog"?"📝 Blog":"🛍 Product"}</span>
+                    <span style={{background:"#334155",color:"#94a3b8",fontSize:10,fontWeight:500,padding:"3px 10px",borderRadius:20}}>{generated.seoType==="local"?"🇵🇰 Local":"🌍 Intl"}</span>
                     <span className="result-name">{generated.product} · {generated.price}</span>
                   </div>
                   <div className="result-btns">
@@ -462,6 +643,9 @@ export default function PostRankAI() {
                     </button>
                     <button className={`btn-publish ${published ? "done" : ""}`} onClick={handlePublish} disabled={publishing || published}>
                       {published ? "✓ Published!" : "🚀 Publish"}
+                    </button>
+                    <button onClick={()=>setShowPublishModal(true)} style={{background:"#0f172a",color:"#a5b4fc",border:"none",borderRadius:8,padding:"9px 14px",fontSize:12,fontWeight:600,cursor:"pointer",fontFamily:"Inter,sans-serif",whiteSpace:"nowrap"}}>
+                      {publishing2 ? "Publishing…" : "🌐 Client Site"}
                     </button>
                   </div>
                 </div>
@@ -472,6 +656,27 @@ export default function PostRankAI() {
                   <div className="rf"><div className="rf-label">🔑 Keywords</div><div className="tags">{generated.keywords?.map((k,i)=><span key={i} className="tag">{k}</span>)}</div></div>
                   <div className="rf"><div className="rf-label"># Hashtags</div><div className="tags">{generated.hashtags?.map((h,i)=><span key={i} className="tag htag">{h}</span>)}</div></div>
                   <div className="rf full"><div className="rf-label">🚀 Call To Action</div><div className="rf-val cta-val">{generated.cta}</div></div>
+                  <div className="rf full"><div className="rf-label">📌 Snippet (150 chars)</div><div className="rf-val" style={{fontSize:12,color:"#475569"}}>{generated.snippet}</div></div>
+                  <div className="rf full"><div className="rf-label">🔗 Custom Permalink</div><div className="rf-val" style={{color:"#6366f1",fontSize:12,wordBreak:"break-all"}}>{generated.permalink}</div></div>
+                  <div className="rf full">
+                    <div className="rf-label">🖼 Image Alt Texts</div>
+                    <div style={{display:"flex",flexDirection:"column",gap:6}}>
+                      {generated.altTexts?.map((alt,i)=>(
+                        <div key={i} style={{background:"var(--bg)",border:"1px solid var(--border)",borderRadius:7,padding:"8px 12px",fontSize:12,color:"var(--ink2)",display:"flex",alignItems:"center",gap:8}}>
+                          <span style={{background:"#6366f1",color:"white",borderRadius:4,padding:"2px 7px",fontSize:10,fontWeight:700}}>IMG {i+1}</span>
+                          {alt}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                  <div className="rf full">
+                    <div className="rf-label">📋 Copy All & Publish Info</div>
+                    <div style={{background:"#fef9c3",border:"1px solid #fde68a",borderRadius:8,padding:"14px 16px",fontSize:12,color:"#78350f",lineHeight:1.7}}>
+                      <strong>⚠️ Auto Publish:</strong> Is waqt aapko manually copy-paste karna hoga apni website par (WordPress, Shopify, etc.).<br/>
+                      <strong>🔜 Coming Soon:</strong> WordPress API, Shopify API aur WooCommerce direct publish feature jald aa raha hai!<br/>
+                      <strong>✅ Abhi karo:</strong> Upar ka content copy karo → apni website ka dashboard kholo → new product/post banao → paste karo.
+                    </div>
+                  </div>
                 </div>
               </div>
             )}
@@ -617,8 +822,8 @@ export default function PostRankAI() {
                 <input className="form-input" placeholder="client@email.com" value={newClient.email} onChange={e=>setNewClient({...newClient,email:e.target.value})} />
               </div>
               <div className="form-group">
-                <label className="form-label">Website</label>
-                <input className="form-input" placeholder="clientwebsite.com" value={newClient.website} onChange={e=>setNewClient({...newClient,website:e.target.value})} />
+                <label className="form-label">Website URL</label>
+                <input className="form-input" placeholder="https://clientwebsite.com" value={newClient.website} onChange={e=>setNewClient({...newClient,website:e.target.value})} />
               </div>
               <div className="form-group">
                 <label className="form-label">Plan</label>
@@ -626,11 +831,91 @@ export default function PostRankAI() {
                   <option>Basic</option><option>Pro</option><option>Agency</option>
                 </select>
               </div>
+              <div className="form-group">
+                <label className="form-label">Platform</label>
+                <select className="form-select" value={newClient.platform} onChange={e=>setNewClient({...newClient,platform:e.target.value})}>
+                  <option value="wordpress">WordPress</option>
+                  <option value="shopify">Shopify</option>
+                  <option value="other">Other</option>
+                </select>
+              </div>
+              {newClient.platform === "wordpress" && (<>
+                <div className="form-group">
+                  <label className="form-label">WordPress Username</label>
+                  <input className="form-input" placeholder="admin" value={newClient.wpUser} onChange={e=>setNewClient({...newClient,wpUser:e.target.value})} />
+                </div>
+                <div className="form-group">
+                  <label className="form-label">WordPress App Password</label>
+                  <input className="form-input" type="password" placeholder="xxxx xxxx xxxx xxxx" value={newClient.wpPassword} onChange={e=>setNewClient({...newClient,wpPassword:e.target.value})} />
+                  <div style={{fontSize:10,color:"#64748b",marginTop:4}}>WordPress → Users → Profile → Application Passwords</div>
+                </div>
+              </>)}
+              {newClient.platform === "shopify" && (<>
+                <div className="form-group">
+                  <label className="form-label">Shopify Store Domain</label>
+                  <input className="form-input" placeholder="mystore.myshopify.com" value={newClient.shopifyUrl} onChange={e=>setNewClient({...newClient,shopifyUrl:e.target.value})} />
+                </div>
+                <div className="form-group">
+                  <label className="form-label">Shopify Access Token</label>
+                  <input className="form-input" type="password" placeholder="shpat_xxxxxx" value={newClient.shopifyKey} onChange={e=>setNewClient({...newClient,shopifyKey:e.target.value})} />
+                  <div style={{fontSize:10,color:"#64748b",marginTop:4}}>Shopify Admin → Apps → Develop Apps → Access Token</div>
+                </div>
+              </>)}
               <div className="modal-btns">
                 <button className="btn-cancel" onClick={()=>setShowAddClient(false)}>Cancel</button>
                 <button className="btn-submit" onClick={addClient}>✓ Client Add Karo</button>
               </div>
             </div>
+          </div>
+        )}
+
+        {/* PUBLISH TO CLIENT MODAL */}
+        {showPublishModal && (
+          <div className="modal-overlay" onClick={e=>e.target.className==="modal-overlay"&&setShowPublishModal(false)}>
+            <div className="modal">
+              <div className="modal-title">🌐 Client Site Par Publish Karo</div>
+              {!generated && <div className="error-box">Pehle post generate karo!</div>}
+              {generated && (<>
+                <div style={{background:"var(--bg)",border:"1px solid var(--border)",borderRadius:8,padding:"12px 14px",marginBottom:16,fontSize:12,color:"var(--ink2)"}}>
+                  <strong>Post:</strong> {generated.seoTitle}
+                </div>
+                <div style={{fontSize:12,color:"var(--muted)",marginBottom:12,fontWeight:600}}>Client select karo:</div>
+                <div style={{display:"flex",flexDirection:"column",gap:8,maxHeight:300,overflowY:"auto"}}>
+                  {clients.filter(c=>c.status==="active").map(c=>(
+                    <div key={c.id} onClick={()=>{setShowPublishModal(false);handleDirectPublish(c);}}
+                      style={{background:"var(--bg)",border:"1px solid var(--border)",borderRadius:10,padding:"12px 16px",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"space-between",transition:"all 0.15s"}}
+                      onMouseOver={e=>e.currentTarget.style.borderColor="#6366f1"}
+                      onMouseOut={e=>e.currentTarget.style.borderColor="var(--border)"}
+                    >
+                      <div>
+                        <div style={{fontWeight:600,fontSize:13,color:"var(--ink)"}}>{c.name}</div>
+                        <div style={{fontSize:11,color:"var(--muted)",marginTop:2}}>{c.website}</div>
+                      </div>
+                      <div style={{display:"flex",alignItems:"center",gap:8}}>
+                        <span style={{background:c.platform==="shopify"?"#96bf48":"#21759b",color:"white",fontSize:10,padding:"3px 8px",borderRadius:4,fontWeight:700}}>
+                          {c.platform==="shopify"?"Shopify":"WordPress"}
+                        </span>
+                        <span style={{color:"#6366f1",fontSize:18}}>→</span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+                {clients.filter(c=>c.status==="active").length === 0 && (
+                  <div className="empty-state"><div>Koi active client nahi. Pehle client add karo.</div></div>
+                )}
+              </>)}
+              <div className="modal-btns" style={{marginTop:16}}>
+                <button className="btn-cancel" onClick={()=>setShowPublishModal(false)}>Cancel</button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* PUBLISH RESULT */}
+        {publishResult && (
+          <div style={{position:"fixed",bottom:80,right:28,background:"#f0fdf4",border:"1px solid #86efac",borderRadius:10,padding:"12px 18px",fontSize:12,color:"#166534",zIndex:9998,maxWidth:300,boxShadow:"0 4px 16px rgba(0,0,0,0.1)"}}>
+            ✅ <strong>Published!</strong><br/>
+            <a href={publishResult.url} target="_blank" rel="noreferrer" style={{color:"#6366f1",textDecoration:"underline",wordBreak:"break-all"}}>{publishResult.url}</a>
           </div>
         )}
 
