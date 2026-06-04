@@ -13,7 +13,7 @@ const FontInjector = () => {
 // ─── CONFIG ───────────────────────────────────────────────────────────────────
 const SUPABASE_URL = "https://yizzvwyvdnkbbhvojqlp.supabase.co";
 const SUPABASE_ANON_KEY = "sb_publishable_Bz5xRPDQ_ZDE99T_QRSLlg_UKLH-6b6";
-const GEMINI_API_KEY = "AIzaSyAQAb8RN6I6D2PzCs_xXAcIr0cEroc5gX0J6ZNIB-_tfl72AOPewA";
+const GEMINI_API_KEY = "AQ.Ab8RN6IZvRvyQzdKoF-H270pZtInggpt1flUcsC377CqXpIBSA";
 
 // ─── GEMINI AI ────────────────────────────────────────────────────────────────
 async function generateSEOPost(productTitle, productPrice) {
@@ -24,10 +24,13 @@ Respond ONLY with valid JSON no markdown no backticks:
 {"seoTitle":"compelling SEO title under 60 chars","description":"rich product description 80-120 words persuasive and benefit-focused","metaDescription":"SEO meta description under 155 chars with price and key benefit","keywords":["keyword1","keyword2","keyword3","keyword4","keyword5"],"hashtags":["#Tag1","#Tag2","#Tag3","#Tag4","#Tag5"],"cta":"compelling call-to-action phrase"}`;
 
   const res = await fetch(
-    `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${GEMINI_API_KEY}`,
+    `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent`,
     {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: { 
+        "Content-Type": "application/json",
+        "x-goog-api-key": GEMINI_API_KEY
+      },
       body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }], generationConfig: { temperature: 0.7, maxOutputTokens: 1000 } }),
     }
   );
