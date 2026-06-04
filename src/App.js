@@ -15,7 +15,9 @@ const SUPABASE_URL = "https://yizzvwyvdnkbbhvojqlp.supabase.co";
 const SUPABASE_ANON_KEY = "sb_publishable_Bz5xRPDQ_ZDE99T_QRSLlg_UKLH-6b6";
 const GEMINI_API_KEY = "AQ.Ab8RN6IZvRvyQzdKoF-H270pZtInggpt1flUcsC377CqXpIBSA";
 
-// ─── GEMINI AI ────────────────────────────────────────────────────────────────
+// ─── GROQ AI (FREE) ───────────────────────────────────────────────────────────
+const GROQ_API_KEY = "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";
+
 async function generateSEOPost(productTitle, productPrice) {
   const prompt = `You are an expert SEO content writer. Generate a complete SEO-optimized product post.
 Product Title: ${productTitle}
@@ -23,20 +25,22 @@ Product Price: ${productPrice}
 Respond ONLY with valid JSON no markdown no backticks:
 {"seoTitle":"compelling SEO title under 60 chars","description":"rich product description 80-120 words persuasive and benefit-focused","metaDescription":"SEO meta description under 155 chars with price and key benefit","keywords":["keyword1","keyword2","keyword3","keyword4","keyword5"],"hashtags":["#Tag1","#Tag2","#Tag3","#Tag4","#Tag5"],"cta":"compelling call-to-action phrase"}`;
 
-  const res = await fetch(
-    `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent`,
-    {
-      method: "POST",
-      headers: { 
-        "Content-Type": "application/json",
-        "x-goog-api-key": GEMINI_API_KEY
-      },
-      body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }], generationConfig: { temperature: 0.7, maxOutputTokens: 1000 } }),
-    }
-  );
+  const res = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "Authorization": `Bearer ${GROQ_API_KEY}`
+    },
+    body: JSON.stringify({
+      model: "llama3-8b-8192",
+      messages: [{ role: "user", content: prompt }],
+      temperature: 0.7,
+      max_tokens: 1000,
+    }),
+  });
   const data = await res.json();
-  if (!res.ok) throw new Error(data.error?.message || "Gemini error");
-  const text = data.candidates?.[0]?.content?.parts?.[0]?.text || "";
+  if (!res.ok) throw new Error(data.error?.message || "Groq error");
+  const text = data.choices?.[0]?.message?.content || "";
   const clean = text.replace(/```json|```/g, "").trim();
   return JSON.parse(clean);
 }
