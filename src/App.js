@@ -24,7 +24,7 @@ Respond ONLY with valid JSON no markdown no backticks:
 {"seoTitle":"compelling SEO title under 60 chars","description":"rich product description 80-120 words persuasive and benefit-focused","metaDescription":"SEO meta description under 155 chars with price and key benefit","keywords":["keyword1","keyword2","keyword3","keyword4","keyword5"],"hashtags":["#Tag1","#Tag2","#Tag3","#Tag4","#Tag5"],"cta":"compelling call-to-action phrase"}`;
 
   const res = await fetch(
-    `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent`,
+    `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent`,
     {
       method: "POST",
       headers: { 
