@@ -684,13 +684,29 @@ export default function PostRankAI() {
                       <input type="file" accept="image/*" multiple id="imgUpload" style={{display:"none"}}
                         onChange={e=>{
                           const files = Array.from(e.target.files);
-                          const previews = files.map((f,i)=>({
-                            file: f,
-                            url: URL.createObjectURL(f),
-                            name: f.name,
-                            alt: generated.altTexts?.[i] || `${generated.product} - Image ${i+1} - Buy Online`,
-                            title: `${generated.product} - ${generated.price}`,
-                          }));
+                          const existingCount = uploadedImages.length;
+                          const angleLabels = ["Front View","Side View","Back View","Detail Shot","Lifestyle Photo","Close Up","Top View","Package Shot"];
+                          const previews = files.map((f,i)=>{
+                            const idx = existingCount + i;
+                            const angle = angleLabels[idx] || `View ${idx+1}`;
+                            const isLocal = generated.seoType === "local";
+                            const isBlog = generated.postType === "blog";
+                            const autoAlt = isBlog
+                              ? `${generated.product} - ${angle} - Complete Guide ${new Date().getFullYear()}`
+                              : isLocal
+                                ? `${generated.product} ${angle} - ${generated.price} - Pakistan Online`
+                                : `${generated.product} ${angle} - Buy Online ${generated.price} - Best Quality`;
+                            const autoTitle = isBlog
+                              ? `${generated.product} ${angle} | Guide ${new Date().getFullYear()}`
+                              : `${generated.product} | ${angle} | ${generated.price}`;
+                            return {
+                              file: f,
+                              url: URL.createObjectURL(f),
+                              name: f.name,
+                              alt: generated.altTexts?.[idx] || autoAlt,
+                              title: autoTitle,
+                            };
+                          });
                           setUploadedImages(prev=>[...prev,...previews]);
                           setImageAlts(prev=>[...prev,...previews.map(p=>({alt:p.alt,title:p.title}))]);
                         }}
