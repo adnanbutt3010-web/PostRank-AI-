@@ -154,7 +154,7 @@ If you're looking for the best ${title} in 2025, look no further. At ${price}, i
 
 // ─── WORDPRESS PUBLISHER ──────────────────────────────────────────────────────
 async function publishToWordPress(siteUrl, username, appPassword, postData) {
-  const url = siteUrl.replace(/\/$/, "") + "/wp-json/wp/v2/posts";
+  const url = siteUrl.replace(/[/]$/, "") + "/wp-json/wp/v2/posts";
   const credentials = btoa(`${username}:${appPassword}`);
   
   const res = await fetch(url, {
@@ -165,7 +165,7 @@ async function publishToWordPress(siteUrl, username, appPassword, postData) {
     },
     body: JSON.stringify({
       title: postData.seoTitle,
-      content: `<p>${postData.description}</p>\n\n<p><strong>Price:</strong> ${postData.price}</p>\n\n<p><em>${postData.cta}</em></p>`,
+      content: "<p>" + postData.description + "</p><p><strong>Price:</strong> " + postData.price + "</p><p><em>" + postData.cta + "</em></p>",
       excerpt: postData.metaDescription,
       status: "publish",
       slug: postData.permalink?.split("/products/")?.[1] || postData.seoTitle.toLowerCase().replace(/[^a-z0-9]+/g, "-"),
@@ -202,8 +202,7 @@ async function publishToShopify(shopDomain, accessToken, postData, images = [], 
     body: JSON.stringify({
       product: {
         title: postData.seoTitle,
-        body_html: `<p>${postData.description.replace(/
-/g, "</p><p>")}</p><p><strong>Price: ${postData.price}</strong></p><p><em>${postData.cta}</em></p>`,
+        body_html: "<p>" + postData.description.split("\n").join("</p><p>") + "</p><p><strong>Price: " + postData.price + "</strong></p><p><em>" + postData.cta + "</em></p>",
         vendor: shopDomain.split(".")[0],
         product_type: postData.product || "General",
         tags: postData.keywords?.join(", ") || "",
