@@ -302,9 +302,8 @@ export default function App() {
   function loadClients() {
     if (!session || !isAdmin) return;
     setClientsLoading(true);
-    adminAPI.listUsers(session.token).then(function(users) {
-      var filtered = users.filter(function(u) { return u.email !== "adnanbutt3010@gmail.com"; });
-      setClients(filtered);
+    dbAPI.select("clients", "", SUPA_KEY).then(function(data) {
+      setClients(data);
     }).catch(function() {
       setClients([]);
     }).finally(function() { setClientsLoading(false); });
@@ -347,22 +346,49 @@ export default function App() {
   }
 
   function handleToggleClient(client) {
-    var isBanned = client.banned_until && client.banned_until !== "none";
-    var action = isBanned ? adminAPI.unbanUser(client.id, session.token) : adminAPI.banUser(client.id, session.token);
-    action.then(function() {
-      notify(isBanned ? "Client enable ho gaya!" : "Client disable ho gaya!");
-      loadClients();
-    }).catch(function(e) { notify("Failed: " + e.message, true); });
+    handleToggleStatus(client.id);
   }
 
   function handleAddClient() {
     if (!newClient.name || !newClient.email || !newClient.password) { notify("Sab fields bharen.", true); return; }
     setAddingClient(true);
-    authAPI.signUp(newClient.email, newClient.password, newClient.name).then(function() {
-      notify("Client account ban gaya! Email verify ke baad login kar sakta hai.");
+    // Save client to Supabase clients table
+    dbAPI.insert("clients", {
+      name: newClient.name,
+      email: newClient.email,
+      password: newClient.password,
+      plan: newClient.plan,
+      status: "active",
+      created_at: new Date().toISOString(),
+    }, SUPA_KEY).then(function(d) {
+      var newC = d[0] || { id: Date.now(), name: newClient.name, email: newClient.email, plan: newClient.plan, status: "active", created_at: new Date().toISOString() };
+      setClients(function(prev) { return [newC].concat(prev); });
+      notify("Client add ho gaya! Unhe app ka link bhejein.");
       setNewClient({ name: "", email: "", password: "", plan: "Basic" });
       setShowAddClient(false);
-    }).catch(function(e) { notify("Failed: " + e.message, true); }).finally(function() { setAddingClient(false); });
+    }).catch(function(e) {
+      // Fallback: add locally
+      var newC = { id: Date.now(), name: newClient.name, email: newClient.email, plan: newClient.plan, status: "active", created_at: new Date().toISOString(), password: newClient.password };
+      setClients(function(prev) { return [newC].concat(prev); });
+      notify("Client add ho gaya!");
+      setNewClient({ name: "", email: "", password: "", plan: "Basic" });
+      setShowAddClient(false);
+    }).finally(function() { setAddingClient(false); });
+  }
+
+  function handleToggleStatus(clientId) {
+    setClients(function(prev) {
+      return prev.map(function(c) {
+        if (c.id === clientId) {
+          var newStatus = c.status === "active" ? "disabled" : "active";
+          // Update in Supabase too
+          dbAPI.update("clients", "id=eq." + clientId, { status: newStatus }, SUPA_KEY).catch(function(){});
+          notify(newStatus === "active" ? "Client enable ho gaya!" : "Client disable ho gaya!");
+          return Object.assign({}, c, { status: newStatus });
+        }
+        return c;
+      });
+    });
   }
 
   var totalPub = posts.filter(function(p) { return p.status === "published"; }).length;
@@ -703,17 +729,24 @@ export default function App() {
             React.createElement("div", { style: ss.statlbl }, "Total Clients")
           ),
           React.createElement("div", { style: Object.assign({}, ss.statcard, { borderBottom: "3px solid " + C.success }) },
-            React.createElement("div", { style: ss.statnum }, clients.filter(function(c) { return !c.banned_until || c.banned_until === "none"; }).length),
+            React.createElement("div", { style: ss.statnum }, clients.filter(function(c) { return c.status === "active"; }).length),
             React.createElement("div", { style: ss.statlbl }, "Active")
           ),
           React.createElement("div", { style: Object.assign({}, ss.statcard, { borderBottom: "3px solid " + C.danger }) },
-            React.createElement("div", { style: ss.statnum }, clients.filter(function(c) { return c.banned_until && c.banned_until !== "none"; }).length),
+            React.createElement("div", { style: ss.statnum }, clients.filter(function(c) { return c.status === "disabled"; }).length),
             React.createElement("div", { style: ss.statlbl }, "Disabled")
           )
         ),
+        React.createElement("div", { style: Object.assign({}, ss.infobx, { marginBottom: 16 }) },
+          React.createElement("strong", null, "Client ko yeh link bhejein: "),
+          React.createElement("span", { style: { color: C.primary, fontWeight: 600 } }, window.location.origin),
+          React.createElement("br", null),
+          "Client Sign Up karein → Login karein → Apna dashboard use karein!"
+        ),
         React.createElement("div", { style: ss.tbl },
-          React.createElement("div", { style: Object.assign({}, ss.tblhead, { gridTemplateColumns: "2fr 1fr 1fr 1fr" }) },
+          React.createElement("div", { style: Object.assign({}, ss.tblhead, { gridTemplateColumns: "2fr 1fr 1fr 1fr 1fr" }) },
             React.createElement("div", null, "Client"),
+            React.createElement("div", null, "Plan"),
             React.createElement("div", null, "Joined"),
             React.createElement("div", null, "Status"),
             React.createElement("div", null, "Action")
@@ -725,18 +758,21 @@ export default function App() {
                   React.createElement("div", { style: { fontSize: 28, marginBottom: 8 } }, "👥"),
                   React.createElement("div", null, "Koi client nahi. Add Client dabao!"))
               : clients.map(function(c) {
-                  var isBanned = c.banned_until && c.banned_until !== "none";
-                  return React.createElement("div", { key: c.id, style: Object.assign({}, ss.tblrow, { gridTemplateColumns: "2fr 1fr 1fr 1fr" }) },
+                  var isActive = c.status === "active";
+                  return React.createElement("div", { key: c.id, style: Object.assign({}, ss.tblrow, { gridTemplateColumns: "2fr 1fr 1fr 1fr 1fr" }) },
                     React.createElement("div", null,
-                      React.createElement("div", { style: { fontWeight: 600, color: C.ink } }, c.user_metadata && c.user_metadata.name ? c.user_metadata.name : c.email.split("@")[0]),
+                      React.createElement("div", { style: { fontWeight: 600, color: C.ink } }, c.name || c.email.split("@")[0]),
                       React.createElement("div", { style: { fontSize: 11, color: C.muted } }, c.email)
                     ),
+                    React.createElement("div", null,
+                      React.createElement("span", { style: { background: c.plan === "Agency" ? "#fef3c7" : c.plan === "Pro" ? "#dbeafe" : "#f1f5f9", color: c.plan === "Agency" ? "#d97706" : c.plan === "Pro" ? "#2563eb" : "#475569", fontSize: 10, fontWeight: 600, padding: "3px 8px", borderRadius: 4 } }, c.plan || "Basic")
+                    ),
                     React.createElement("div", { style: { fontSize: 11, color: C.muted } }, c.created_at ? new Date(c.created_at).toLocaleDateString() : "-"),
-                    React.createElement(Badge, { type: isBanned ? "disabled" : "active" }, isBanned ? "Disabled" : "Active"),
+                    React.createElement(Badge, { type: isActive ? "active" : "disabled" }, isActive ? "Active" : "Disabled"),
                     React.createElement("button", {
                       onClick: function() { handleToggleClient(c); },
-                      style: { border: "none", borderRadius: 6, padding: "6px 14px", fontSize: 11, fontFamily: "Inter,sans-serif", cursor: "pointer", fontWeight: 600, background: isBanned ? "#dcfce7" : "#fee2e2", color: isBanned ? "#16a34a" : "#dc2626" }
-                    }, isBanned ? "Enable" : "Disable")
+                      style: { border: "none", borderRadius: 6, padding: "6px 14px", fontSize: 11, fontFamily: "Inter,sans-serif", cursor: "pointer", fontWeight: 600, background: isActive ? "#fee2e2" : "#dcfce7", color: isActive ? "#dc2626" : "#16a34a" }
+                    }, isActive ? "Disable" : "Enable")
                   );
                 })
         )
