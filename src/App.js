@@ -226,6 +226,8 @@ export default function App() {
   var [addingClient, setAddingClient] = useState(false);
   var [clients, setClients] = useState([]);
   var [clientsLoading, setClientsLoading] = useState(false);
+  var [editClient, setEditClient] = useState(null);
+  var [showEditModal, setShowEditModal] = useState(false);
   var [toast, setToast] = useState(null);
   var [toastErr, setToastErr] = useState(false);
 
@@ -382,6 +384,36 @@ export default function App() {
       setNewClient({ name: "", email: "", password: "", plan: "Basic" });
       setShowAddClient(false);
     }).finally(function() { setAddingClient(false); });
+  }
+
+  function handleEditClient() {
+    if (!editClient) return;
+    dbAPI.update("clients", "id=eq." + editClient.id, {
+      name: editClient.name,
+      email: editClient.email,
+      plan: editClient.plan,
+      website: editClient.website || "",
+    }, SUPA_KEY).then(function() {
+      setClients(function(prev) {
+        return prev.map(function(c) { return c.id === editClient.id ? Object.assign({}, c, editClient) : c; });
+      });
+      notify("Client update ho gaya!");
+      setShowEditModal(false);
+      setEditClient(null);
+    }).catch(function(e) { notify("Update failed: " + e.message, true); });
+  }
+
+  function handleDeleteClient(clientId) {
+    if (!window.confirm("Client delete karna chahte hain?")) return;
+    dbAPI.delete ? 
+      fetch(SUPA_URL + "/rest/v1/clients?id=eq." + clientId, {
+        method: "DELETE",
+        headers: { apikey: SUPA_KEY, Authorization: "Bearer " + SUPA_KEY }
+      }).then(function() {
+        setClients(function(prev) { return prev.filter(function(c) { return c.id !== clientId; }); });
+        notify("Client delete ho gaya!");
+      }).catch(function(e) { notify("Delete failed: " + e.message, true); })
+    : null;
   }
 
   function handleToggleStatus(clientId) {
@@ -752,12 +784,12 @@ export default function App() {
           "Client Sign Up karein → Login karein → Apna dashboard use karein!"
         ),
         React.createElement("div", { style: ss.tbl },
-          React.createElement("div", { style: Object.assign({}, ss.tblhead, { gridTemplateColumns: "2fr 1fr 1fr 1fr 1fr" }) },
+          React.createElement("div", { style: Object.assign({}, ss.tblhead, { gridTemplateColumns: "2fr 1fr 1fr 1fr 1.5fr" }) },
             React.createElement("div", null, "Client"),
             React.createElement("div", null, "Plan"),
             React.createElement("div", null, "Joined"),
             React.createElement("div", null, "Status"),
-            React.createElement("div", null, "Action")
+            React.createElement("div", null, "Actions")
           ),
           clientsLoading
             ? React.createElement("div", { style: { textAlign: "center", padding: 28, color: C.muted } }, "Loading clients...")
@@ -767,7 +799,7 @@ export default function App() {
                   React.createElement("div", null, "Koi client nahi. Add Client dabao!"))
               : clients.map(function(c) {
                   var isActive = c.status === "active";
-                  return React.createElement("div", { key: c.id, style: Object.assign({}, ss.tblrow, { gridTemplateColumns: "2fr 1fr 1fr 1fr 1fr" }) },
+                  return React.createElement("div", { key: c.id, style: Object.assign({}, ss.tblrow, { gridTemplateColumns: "2fr 1fr 1fr 1fr 1.5fr" }) },
                     React.createElement("div", null,
                       React.createElement("div", { style: { fontWeight: 600, color: C.ink } }, c.name || c.email.split("@")[0]),
                       React.createElement("div", { style: { fontSize: 11, color: C.muted } }, c.email)
@@ -777,10 +809,20 @@ export default function App() {
                     ),
                     React.createElement("div", { style: { fontSize: 11, color: C.muted } }, c.created_at ? new Date(c.created_at).toLocaleDateString() : "-"),
                     React.createElement(Badge, { type: isActive ? "active" : "disabled" }, isActive ? "Active" : "Disabled"),
-                    React.createElement("button", {
-                      onClick: function() { handleToggleClient(c); },
-                      style: { border: "none", borderRadius: 6, padding: "6px 14px", fontSize: 11, fontFamily: "Inter,sans-serif", cursor: "pointer", fontWeight: 600, background: isActive ? "#fee2e2" : "#dcfce7", color: isActive ? "#dc2626" : "#16a34a" }
-                    }, isActive ? "Disable" : "Enable")
+                    React.createElement("div", { style: { display: "flex", gap: 5, flexWrap: "wrap" } },
+                      React.createElement("button", {
+                        onClick: function() { handleToggleClient(c); },
+                        style: { border: "none", borderRadius: 6, padding: "5px 10px", fontSize: 11, fontFamily: "Inter,sans-serif", cursor: "pointer", fontWeight: 600, background: isActive ? "#fee2e2" : "#dcfce7", color: isActive ? "#dc2626" : "#16a34a" }
+                      }, isActive ? "Disable" : "Enable"),
+                      React.createElement("button", {
+                        onClick: function() { setEditClient(Object.assign({}, c)); setShowEditModal(true); },
+                        style: { border: "none", borderRadius: 6, padding: "5px 10px", fontSize: 11, fontFamily: "Inter,sans-serif", cursor: "pointer", fontWeight: 600, background: "#dbeafe", color: "#2563eb" }
+                      }, "Edit"),
+                      React.createElement("button", {
+                        onClick: function() { handleDeleteClient(c.id); },
+                        style: { border: "none", borderRadius: 6, padding: "5px 10px", fontSize: 11, fontFamily: "Inter,sans-serif", cursor: "pointer", fontWeight: 600, background: "#fee2e2", color: "#dc2626" }
+                      }, "Del")
+                    )
                   );
                 })
         )
@@ -836,6 +878,37 @@ export default function App() {
               React.createElement("button", { style: { width: "100%", padding: 12, borderRadius: 10, border: "2px solid " + C.primary, background: p.featured ? C.primary : "transparent", color: p.featured ? "white" : C.primary, fontFamily: "Poppins,sans-serif", fontSize: 13, fontWeight: 600, cursor: "pointer" } }, p.name === (profile.plan || "Basic") ? "Current Plan" : "Get Started")
             );
           })
+        )
+      )
+    ),
+
+    // EDIT CLIENT MODAL
+    showEditModal && editClient && React.createElement("div", { style: ss.overlay, onClick: function(e) { if (e.target === e.currentTarget) setShowEditModal(false); } },
+      React.createElement("div", { style: ss.modal },
+        React.createElement("div", { style: { fontFamily: "Poppins,sans-serif", fontSize: 18, fontWeight: 700, marginBottom: 20 } }, "Client Edit Karo"),
+        React.createElement("div", { style: ss.fmgroup },
+          React.createElement("label", { style: ss.fmlabel }, "Name"),
+          React.createElement(Input, { value: editClient.name || "", onChange: function(e) { setEditClient(function(c) { return Object.assign({}, c, { name: e.target.value }); }); } })
+        ),
+        React.createElement("div", { style: ss.fmgroup },
+          React.createElement("label", { style: ss.fmlabel }, "Email"),
+          React.createElement(Input, { value: editClient.email || "", onChange: function(e) { setEditClient(function(c) { return Object.assign({}, c, { email: e.target.value }); }); } })
+        ),
+        React.createElement("div", { style: ss.fmgroup },
+          React.createElement("label", { style: ss.fmlabel }, "Website"),
+          React.createElement(Input, { placeholder: "https://clientsite.com", value: editClient.website || "", onChange: function(e) { setEditClient(function(c) { return Object.assign({}, c, { website: e.target.value }); }); } })
+        ),
+        React.createElement("div", { style: ss.fmgroup },
+          React.createElement("label", { style: ss.fmlabel }, "Plan"),
+          React.createElement("select", { value: editClient.plan || "Basic", onChange: function(e) { setEditClient(function(c) { return Object.assign({}, c, { plan: e.target.value }); }); }, style: { width: "100%", background: C.bg, border: "1.5px solid " + C.border, borderRadius: 9, padding: "11px 14px", fontFamily: "Inter,sans-serif", fontSize: 13 } },
+            React.createElement("option", { value: "Basic" }, "Basic"),
+            React.createElement("option", { value: "Pro" }, "Pro"),
+            React.createElement("option", { value: "Agency" }, "Agency")
+          )
+        ),
+        React.createElement("div", { style: { display: "flex", gap: 10, marginTop: 20 } },
+          React.createElement("button", { onClick: function() { setShowEditModal(false); }, style: { flex: 1, padding: 11, borderRadius: 9, border: "1.5px solid " + C.border, background: "transparent", color: C.muted, fontFamily: "Inter,sans-serif", fontSize: 13, cursor: "pointer" } }, "Cancel"),
+          React.createElement(Btn, { variant: "primary", onClick: handleEditClient }, "Save Changes")
         )
       )
     ),
