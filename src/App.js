@@ -263,13 +263,21 @@ export default function App() {
 
     // Client login via Supabase
     authAPI.signIn(loginEmail, loginPw).then(function(d) {
-      var sess = { token: d.access_token, user: d.user };
-      var prof = { email: d.user.email, name: d.user.user_metadata && d.user.user_metadata.name ? d.user.user_metadata.name : d.user.email.split("@")[0], role: d.user.user_metadata && d.user.user_metadata.role ? d.user.user_metadata.role : "client", plan: d.user.user_metadata && d.user.user_metadata.plan ? d.user.user_metadata.plan : "Basic" };
+      if (!d || !d.access_token) throw new Error("Login failed - check email/password");
+      var user = d.user || {};
+      var meta = user.user_metadata || {};
+      var sess = { token: d.access_token, user: user };
+      var prof = {
+        email: user.email || loginEmail,
+        name: meta.name || loginEmail.split("@")[0],
+        role: meta.role || "client",
+        plan: meta.plan || "Basic"
+      };
       setSession(sess); setProfile(prof);
       localStorage.setItem("pr_sess", JSON.stringify(sess));
       localStorage.setItem("pr_prof", JSON.stringify(prof));
       setView("generate");
-    }).catch(function(e) { setAuthError(e.message); }).finally(function() { setAuthLoading(false); });
+    }).catch(function(e) { setAuthError(e.message || "Login failed"); }).finally(function() { setAuthLoading(false); });
   }
 
   function handleRegister() {
