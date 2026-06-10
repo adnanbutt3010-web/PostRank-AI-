@@ -637,6 +637,83 @@ export default function App() {
     setTimeout(function() { doc.print(); }, 600);
   }
 
+  function downloadInvoicePDF(invoice) {
+    var total = calcTotal(invoice.services);
+    var rows = invoice.services.map(function(s) {
+      return [
+        "<tr>",
+        "<td style='padding:10px;border-bottom:1px solid #eee'>" + s.name + "</td>",
+        "<td style='padding:10px;border-bottom:1px solid #eee;text-align:center'>" + s.qty + "</td>",
+        "<td style='padding:10px;border-bottom:1px solid #eee;text-align:right'>" + formatPKR(s.price) + "</td>",
+        "<td style='padding:10px;border-bottom:1px solid #eee;text-align:right'>" + formatPKR(s.qty * s.price) + "</td>",
+        "</tr>"
+      ].join("");
+    }).join("");
+
+    var sc = invoice.status === "paid" ? "#16a34a" : invoice.status === "overdue" ? "#dc2626" : "#d97706";
+
+    var parts = [];
+    parts.push("<!DOCTYPE html><html><head><meta charset='UTF-8'><title>" + invoice.invoiceNo + "</title>");
+    parts.push("<style>");
+    parts.push("body{font-family:Arial,sans-serif;margin:0;padding:0;color:#1a1a2e;-webkit-print-color-adjust:exact;print-color-adjust:exact}");
+    parts.push(".hdr{background:#1e293b;color:white;padding:30px 40px;display:flex;justify-content:space-between;align-items:flex-start}");
+    parts.push(".co-name{font-size:28px;font-weight:900;color:#60a5fa}");
+    parts.push(".co-tag{font-size:12px;color:#94a3b8;margin-top:4px}");
+    parts.push(".inv-title{font-size:32px;font-weight:900;color:#c8f03c;letter-spacing:2px;text-align:right}");
+    parts.push(".body{padding:40px}");
+    parts.push(".two{display:grid;grid-template-columns:1fr 1fr;gap:30px;margin-bottom:30px}");
+    parts.push(".sec-title{font-size:11px;text-transform:uppercase;letter-spacing:1px;color:#64748b;font-weight:700;margin-bottom:10px}");
+    parts.push(".box{background:#f8fafc;border-radius:10px;padding:16px;border:1px solid #e2e8f0}");
+    parts.push("table{width:100%;border-collapse:collapse;margin-bottom:20px}");
+    parts.push("th{background:#1e293b;color:white;padding:12px;text-align:left;font-size:12px;text-transform:uppercase}");
+    parts.push("td{padding:12px;border-bottom:1px solid #f1f5f9;font-size:13px}");
+    parts.push(".ftr{background:#f8fafc;padding:24px 40px;border-top:3px solid #6366f1;text-align:center;font-size:12px;color:#475569}");
+    parts.push("@media print{body{-webkit-print-color-adjust:exact;print-color-adjust:exact}}");
+    parts.push("</style></head><body>");
+    parts.push("<div class='hdr'><div><div class='co-name'>" + COMPANY_INFO.name + "</div>");
+    parts.push("<div class='co-tag'>" + COMPANY_INFO.tagline + "</div>");
+    parts.push("<div style='margin-top:12px;font-size:12px;color:#94a3b8'>" + COMPANY_INFO.founder + " | " + COMPANY_INFO.title + "<br>" + COMPANY_INFO.email + "<br>" + COMPANY_INFO.phone + "<br>" + COMPANY_INFO.website + "</div></div>");
+    parts.push("<div style='text-align:right'><div class='inv-title'>INVOICE</div>");
+    parts.push("<div style='font-size:14px;color:#94a3b8;margin-top:4px'>" + invoice.invoiceNo + "</div>");
+    parts.push("<div style='margin-top:10px;font-size:12px;color:#94a3b8'>Date: " + invoice.date + "<br>Due: " + (invoice.dueDate || "N/A") + "</div>");
+    parts.push("<div style='margin-top:10px;display:inline-block;padding:6px 16px;border-radius:20px;font-size:13px;font-weight:700;background:" + sc + "30;color:" + sc + ";border:2px solid " + sc + "'>" + invoice.status.toUpperCase() + "</div></div></div>");
+    parts.push("<div class='body'><div class='two'>");
+    parts.push("<div><div class='sec-title'>Bill To</div><div class='box'>");
+    parts.push("<div style='font-size:16px;font-weight:700'>" + invoice.customer.name + "</div>");
+    parts.push("<div style='font-size:13px;color:#475569;margin-top:3px'>" + (invoice.customer.company || "") + "</div>");
+    parts.push("<div style='font-size:13px;color:#475569'>" + invoice.customer.phone + "</div></div></div>");
+    parts.push("<div><div class='sec-title'>Invoice Info</div><div class='box'>");
+    parts.push("<div style='font-size:13px;color:#475569'>Invoice: <strong>" + invoice.invoiceNo + "</strong></div>");
+    parts.push("<div style='font-size:13px;color:#475569'>Date: " + invoice.date + "</div>");
+    parts.push("<div style='font-size:13px;color:#475569'>Due: " + (invoice.dueDate || "N/A") + "</div></div></div></div>");
+    parts.push("<table><thead><tr><th>Service / Description</th><th style='text-align:center'>Qty</th><th style='text-align:right'>Unit Price</th><th style='text-align:right'>Total</th></tr></thead>");
+    parts.push("<tbody>" + rows);
+    parts.push("<tr><td colspan='3' style='padding:14px;text-align:right;font-weight:700;font-size:15px'>TOTAL AMOUNT</td>");
+    parts.push("<td style='padding:14px;text-align:right;font-size:20px;font-weight:900;color:#6366f1'>" + formatPKR(total) + "</td></tr></tbody></table>");
+    parts.push("<div style='display:flex;justify-content:space-between;align-items:flex-end;margin-top:20px'>");
+    parts.push("<div style='max-width:60%;font-size:12px;color:#475569;line-height:1.6'>");
+    parts.push("<strong style='font-size:11px;text-transform:uppercase;letter-spacing:1px;color:#64748b'>Notes and Terms</strong><br>");
+    parts.push((invoice.notes || "Payment due within 15 days. Thank you for your business!") + "</div>");
+    parts.push("<div style='text-align:center;border-top:2px solid #334155;padding-top:10px;min-width:200px'>");
+    parts.push("<div style='font-style:italic;color:#6366f1;font-size:16px;margin-bottom:6px'>Adnan Butt</div>");
+    parts.push("<div style='font-weight:700;font-size:14px'>" + COMPANY_INFO.founder + "</div>");
+    parts.push("<div style='font-size:12px;color:#64748b'>" + COMPANY_INFO.title + " | " + COMPANY_INFO.name + "</div></div></div></div>");
+    parts.push("<div class='ftr'>" + COMPANY_INFO.name + " | " + COMPANY_INFO.email + " | " + COMPANY_INFO.phone + " | " + COMPANY_INFO.website + "</div>");
+    parts.push("</body></html>");
+
+    var htmlContent = parts.join("");
+    var blob = new Blob([htmlContent], { type: "application/pdf" });
+    var url = URL.createObjectURL(blob);
+    var a = document.createElement("a");
+    a.href = url;
+    a.download = invoice.invoiceNo + "-" + invoice.customer.name + ".pdf";
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    notify("Invoice download ho rahi hai!");
+  }
+
   var ss = {
     app: { display: "flex", minHeight: "100vh", fontFamily: "Inter,sans-serif", background: C.bg, color: C.ink },
     sidebar: { width: 230, background: C.sidebar, minHeight: "100vh", position: "fixed", left: 0, top: 0, bottom: 0, display: "flex", flexDirection: "column", zIndex: 100 },
@@ -1131,7 +1208,8 @@ export default function App() {
                 )
               ),
               React.createElement("div", { style: { display: "flex", gap: 5, flexWrap: "wrap" } },
-                React.createElement("button", { onClick: function() { printInvoice(inv); }, style: { border: "none", borderRadius: 6, padding: "5px 10px", fontSize: 11, cursor: "pointer", fontWeight: 600, background: C.primaryLight, color: C.primary } }, "PDF"),
+                React.createElement("button", { onClick: function() { downloadInvoicePDF(inv); }, style: { border: "none", borderRadius: 6, padding: "5px 10px", fontSize: 11, cursor: "pointer", fontWeight: 600, background: C.primaryLight, color: C.primary } }, "Download"),
+                React.createElement("button", { onClick: function() { printInvoice(inv); }, style: { border: "none", borderRadius: 6, padding: "5px 10px", fontSize: 11, cursor: "pointer", fontWeight: 600, background: "#f3f4f6", color: "#374151" } }, "Print"),
                 React.createElement("button", { onClick: function() { sendWhatsApp(inv, false); }, style: { border: "none", borderRadius: 6, padding: "5px 10px", fontSize: 11, cursor: "pointer", fontWeight: 600, background: "#dcfce7", color: "#16a34a" } }, "WA Send"),
                 inv.status !== "paid" ? React.createElement("button", { onClick: function() { sendWhatsApp(inv, true); }, style: { border: "none", borderRadius: 6, padding: "5px 10px", fontSize: 11, cursor: "pointer", fontWeight: 600, background: "#fef9c3", color: "#ca8a04" } }, "Reminder") : null,
                 React.createElement("button", { onClick: function() { handleDeleteInvoice(inv.id); }, style: { border: "none", borderRadius: 6, padding: "5px 10px", fontSize: 11, cursor: "pointer", fontWeight: 600, background: "#fee2e2", color: "#dc2626" } }, "Del")
@@ -1228,36 +1306,4 @@ export default function App() {
         ),
         React.createElement("div", { style: ss.fmgroup },
           React.createElement("label", { style: ss.fmlabel }, "Plan"),
-          React.createElement("select", { value: editClient.plan || "Basic", onChange: function(e) { setEditClient(function(c) { return Object.assign({}, c, { plan: e.target.value }); }); }, style: { width: "100%", background: C.bg, border: "1.5px solid " + C.border, borderRadius: 9, padding: "11px 14px", fontFamily: "Inter,sans-serif", fontSize: 13 } },
-            React.createElement("option", { value: "Basic" }, "Basic - $19/mo"),
-            React.createElement("option", { value: "Pro" }, "Pro - $49/mo"),
-            React.createElement("option", { value: "Agency" }, "Agency - $149/mo")
-          )
-        ),
-        React.createElement("div", { style: { display: "flex", gap: 10, marginTop: 20 } },
-          React.createElement("button", { onClick: function() { setShowEditModal(false); }, style: { flex: 1, padding: 11, borderRadius: 9, border: "1.5px solid " + C.border, background: "transparent", color: C.muted, fontFamily: "Inter,sans-serif", fontSize: 13, cursor: "pointer" } }, "Cancel"),
-          React.createElement(Btn, { variant: "primary", onClick: handleEditClient }, "Save Changes")
-        )
-      )
-    ),
-
-    // ADD CLIENT MODAL
-    showAddClient && React.createElement("div", { style: ss.overlay, onClick: function(e) { if (e.target === e.currentTarget) setShowAddClient(false); } },
-      React.createElement("div", { style: ss.modal },
-        React.createElement("div", { style: { fontFamily: "Poppins,sans-serif", fontSize: 18, fontWeight: 700, marginBottom: 20 } }, "Naya Client Add Karo"),
-        React.createElement("div", { style: ss.infobx, marginBottom: 16 }, "Client ka Supabase account banayein. Wo email verify karke login karega."),
-        React.createElement("div", { style: ss.fmgroup }, React.createElement("label", { style: ss.fmlabel }, "Name *"), React.createElement(Input, { placeholder: "Ali Store", value: newClient.name, onChange: function(e) { setNewClient(function(c) { return Object.assign({}, c, { name: e.target.value }); }); } })),
-        React.createElement("div", { style: ss.fmgroup }, React.createElement("label", { style: ss.fmlabel }, "Email *"), React.createElement(Input, { type: "email", placeholder: "client@email.com", value: newClient.email, onChange: function(e) { setNewClient(function(c) { return Object.assign({}, c, { email: e.target.value }); }); } })),
-        React.createElement("div", { style: ss.fmgroup }, React.createElement("label", { style: ss.fmlabel }, "Password *"), React.createElement(Input, { type: "password", placeholder: "Min 6 chars", value: newClient.password, onChange: function(e) { setNewClient(function(c) { return Object.assign({}, c, { password: e.target.value }); }); } })),
-        React.createElement("div", { style: ss.fmgroup }, React.createElement("label", { style: ss.fmlabel }, "Plan"), React.createElement("select", { value: newClient.plan, onChange: function(e) { setNewClient(function(c) { return Object.assign({}, c, { plan: e.target.value }); }); }, style: { width: "100%", background: C.bg, border: "1.5px solid " + C.border, borderRadius: 9, padding: "11px 14px", fontFamily: "Inter,sans-serif", fontSize: 13 } }, React.createElement("option", null, "Basic"), React.createElement("option", null, "Pro"), React.createElement("option", null, "Agency"))),
-        React.createElement("div", { style: { display: "flex", gap: 10, marginTop: 20 } },
-          React.createElement("button", { onClick: function() { setShowAddClient(false); }, style: { flex: 1, padding: 11, borderRadius: 9, border: "1.5px solid " + C.border, background: "transparent", color: C.muted, fontFamily: "Inter,sans-serif", fontSize: 13, cursor: "pointer" } }, "Cancel"),
-          React.createElement(Btn, { variant: "primary", onClick: handleAddClient, disabled: addingClient }, addingClient ? "Ban raha hai..." : "Client Add Karo")
-        )
-      )
-    ),
-
-    // TOAST
-    toast && React.createElement("div", { style: Object.assign({}, ss.toast, { borderLeft: "4px solid " + (toastErr ? C.danger : C.success) }) }, toast)
-  );
-}
+          React.createElement("select", { value: editClient.plan || "Basic", onChange: function(e) { setEditClient(function(c) { return Object.assign({}, c, { plan: e.target.value }); }); }, style: { width: "100%", background
