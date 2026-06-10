@@ -329,6 +329,30 @@ export default function App() {
     if (session && (view === "dashboard" || view === "posts")) loadPosts();
   }, [view, session]);
 
+  function loadInvoices() {
+    dbAPI.select("invoices", "", SUPA_KEY).then(function(data) {
+      var mapped = data.map(function(r) {
+        var svcs = [];
+        try { svcs = typeof r.services === "string" ? JSON.parse(r.services) : (r.services || []); } catch(e) {}
+        return {
+          id: r.id,
+          invoiceNo: r.invoice_no,
+          date: r.date,
+          dueDate: r.due_date,
+          customer: { name: r.customer_name, phone: r.customer_phone, company: r.customer_company, whatsapp: r.customer_whatsapp },
+          services: svcs,
+          status: r.status,
+          notes: r.notes,
+        };
+      });
+      setInvoices(mapped);
+    }).catch(function() {});
+  }
+
+  useEffect(function() {
+    if (session && isAdmin && view === "invoices") loadInvoices();
+  }, [view, session]);
+
   function loadClients() {
     if (!session || !isAdmin) return;
     setClientsLoading(true);
@@ -481,24 +505,60 @@ export default function App() {
   function handleCreateInvoice() {
     if (!newInvoice.customer.name) { notify("Customer name zaroor bharen!", true); return; }
     var today = new Date().toISOString().split("T")[0];
-    var inv = Object.assign({}, newInvoice, {
+    var invNo = getNextInvoiceNo();
+    var inv = {
       id: Date.now(),
-      invoiceNo: getNextInvoiceNo(),
+      invoiceNo: invNo,
       date: today,
+      dueDate: newInvoice.dueDate,
+      customer: newInvoice.customer,
+      services: newInvoice.services,
+      status: newInvoice.status,
+      notes: newInvoice.notes,
+    };
+    // Save to Supabase
+    var rec = {
+      invoice_no: invNo,
+      date: today,
+      due_date: newInvoice.dueDate || "",
+      customer_name: newInvoice.customer.name,
+      customer_phone: newInvoice.customer.phone || "",
+      customer_company: newInvoice.customer.company || "",
+      customer_whatsapp: newInvoice.customer.whatsapp || "",
+      services: JSON.stringify(newInvoice.services),
+      status: newInvoice.status || "pending",
+      notes: newInvoice.notes || "",
+      created_at: new Date().toISOString(),
+    };
+    dbAPI.insert("invoices", rec, SUPA_KEY).then(function(d) {
+      var saved = d[0] || rec;
+      var fullInv = Object.assign({}, inv, { id: saved.id || inv.id });
+      setInvoices(function(prev) { return [fullInv].concat(prev); });
+      notify("Invoice ban gayi aur save ho gayi!");
+    }).catch(function() {
+      setInvoices(function(prev) { return [inv].concat(prev); });
+      notify("Invoice ban gayi! (Local)");
     });
-    setInvoices(function(prev) { return [inv].concat(prev); });
     setNewInvoice({ customer: { name: "", phone: "", company: "", whatsapp: "" }, services: [{ name: "PostRank AI", qty: 1, price: 25000 }], dueDate: "", notes: "", status: "pending" });
     setShowInvoiceModal(false);
-    notify("Invoice ban gayi!");
   }
 
   function handleDeleteInvoice(id) {
     if (!window.confirm("Invoice delete karein?")) return;
+    fetch(SUPA_URL + "/rest/v1/invoices?id=eq." + id, {
+      method: "DELETE",
+      headers: { apikey: SUPA_KEY, Authorization: "Bearer " + SUPA_KEY }
+    }).catch(function(){});
     setInvoices(function(prev) { return prev.filter(function(i) { return i.id !== id; }); });
     notify("Invoice delete ho gayi!");
   }
 
   function handleStatusChange(id, status) {
+    fetch(SUPA_URL + "/rest/v1/invoices?id=eq." + id, {
+      method: "PATCH",
+      headers: { apikey: SUPA_KEY, Authorization: "Bearer " + SUPA_KEY, "Content-Type": "application/json" },
+      body: JSON.stringify({ status: status })
+    }).catch(function(){});
     setInvoices(function(prev) { return prev.map(function(i) { return i.id === id ? Object.assign({}, i, { status: status }) : i; }); });
     notify("Status update ho gaya!");
   }
@@ -702,16 +762,18 @@ export default function App() {
     parts.push("</body></html>");
 
     var htmlContent = parts.join("");
-    var blob = new Blob([htmlContent], { type: "application/pdf" });
-    var url = URL.createObjectURL(blob);
-    var a = document.createElement("a");
-    a.href = url;
-    a.download = invoice.invoiceNo + "-" + invoice.customer.name + ".pdf";
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
-    notify("Invoice download ho rahi hai!");
+    // Open in new window and trigger print to PDF
+    var win = window.open("", "_blank", "width=800,height=600");
+    if (!win) { notify("Popup allow karein browser mein!", true); return; }
+    win.document.write(htmlContent);
+    win.document.close();
+    win.focus();
+    // Add download instruction
+    win.document.title = invoice.invoiceNo + " - " + invoice.customer.name;
+    setTimeout(function() {
+      win.print();
+    }, 800);
+    notify("Print dialog mein 'Save as PDF' select karein!");
   }
 
   var ss = {
@@ -1208,7 +1270,7 @@ export default function App() {
                 )
               ),
               React.createElement("div", { style: { display: "flex", gap: 5, flexWrap: "wrap" } },
-                React.createElement("button", { onClick: function() { downloadInvoicePDF(inv); }, style: { border: "none", borderRadius: 6, padding: "5px 10px", fontSize: 11, cursor: "pointer", fontWeight: 600, background: C.primaryLight, color: C.primary } }, "Download"),
+                React.createElement("button", { onClick: function() { downloadInvoicePDF(inv); }, style: { border: "none", borderRadius: 6, padding: "5px 10px", fontSize: 11, cursor: "pointer", fontWeight: 600, background: C.primaryLight, color: C.primary } }, "PDF Save"),
                 React.createElement("button", { onClick: function() { printInvoice(inv); }, style: { border: "none", borderRadius: 6, padding: "5px 10px", fontSize: 11, cursor: "pointer", fontWeight: 600, background: "#f3f4f6", color: "#374151" } }, "Print"),
                 React.createElement("button", { onClick: function() { sendWhatsApp(inv, false); }, style: { border: "none", borderRadius: 6, padding: "5px 10px", fontSize: 11, cursor: "pointer", fontWeight: 600, background: "#dcfce7", color: "#16a34a" } }, "WA Send"),
                 inv.status !== "paid" ? React.createElement("button", { onClick: function() { sendWhatsApp(inv, true); }, style: { border: "none", borderRadius: 6, padding: "5px 10px", fontSize: 11, cursor: "pointer", fontWeight: 600, background: "#fef9c3", color: "#ca8a04" } }, "Reminder") : null,
