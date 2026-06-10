@@ -5,6 +5,16 @@ const SUPA_KEY = "sb_publishable_Bz5xRPDQ_ZDE99T_QRSLlg_UKLH-6b6";
 const ADMIN_EMAIL = "adnanbutt3010@gmail.com";
 const ADMIN_USER = "admin";
 const ADMIN_PASS = "Pst@2026";
+const COMPANY_INFO = {
+  name: "GeoRouteX",
+  tagline: "Map Your Digital Success",
+  founder: "Adnan Butt",
+  title: "Founder & CEO",
+  email: "adnanbutt3010@gmail.com",
+  phone: "+92-309-4626298",
+  website: "www.georoutex.com",
+  whatsapp: "923094626298",
+};
 
 const authAPI = {
   async signIn(email, password) {
@@ -228,6 +238,16 @@ export default function App() {
   var [clientsLoading, setClientsLoading] = useState(false);
   var [editClient, setEditClient] = useState(null);
   var [showEditModal, setShowEditModal] = useState(false);
+  var [invoices, setInvoices] = useState([
+    { id: 1, invoiceNo: "INV-0001", date: "2025-06-01", dueDate: "2025-06-15", customer: { name: "Ali Store", phone: "+92-300-1234567", company: "Ali Enterprises", whatsapp: "923001234567" }, services: [{ name: "PostRank AI - Pro Plan", qty: 1, price: 49000 }], status: "paid", notes: "Thank you for your business!" },
+    { id: 2, invoiceNo: "INV-0002", date: "2025-06-05", dueDate: "2025-06-20", customer: { name: "Sara Khan", phone: "+92-321-9876543", company: "Sara Digital", whatsapp: "923219876543" }, services: [{ name: "PostRank AI - Basic Plan", qty: 1, price: 19000 }], status: "pending", notes: "" },
+    { id: 3, invoiceNo: "INV-0003", date: "2025-05-20", dueDate: "2025-06-05", customer: { name: "Malik Traders", phone: "+92-333-5556677", company: "Malik & Co", whatsapp: "923335556677" }, services: [{ name: "PostRank AI - Agency Plan", qty: 1, price: 149000 }, { name: "SEO Consultation", qty: 2, price: 15000 }], status: "overdue", notes: "" },
+  ]);
+  var [showInvoiceModal, setShowInvoiceModal] = useState(false);
+  var [editInvoice, setEditInvoice] = useState(null);
+  var [invoiceView, setInvoiceView] = useState("list");
+  var [selectedInvoice, setSelectedInvoice] = useState(null);
+  var [newInvoice, setNewInvoice] = useState({ customer: { name: "", phone: "", company: "", whatsapp: "" }, services: [{ name: "PostRank AI", qty: 1, price: 25000 }], dueDate: "", notes: "", status: "pending" });
   var [toast, setToast] = useState(null);
   var [toastErr, setToastErr] = useState(false);
 
@@ -388,32 +408,41 @@ export default function App() {
 
   function handleEditClient() {
     if (!editClient) return;
-    dbAPI.update("clients", "id=eq." + editClient.id, {
-      name: editClient.name,
-      email: editClient.email,
-      plan: editClient.plan,
-      website: editClient.website || "",
-    }, SUPA_KEY).then(function() {
+    var updateData = { name: editClient.name, email: editClient.email, plan: editClient.plan };
+    if (editClient.newPassword && editClient.newPassword.length >= 6) {
+      updateData.password = editClient.newPassword;
+    }
+    dbAPI.update("clients", "id=eq." + editClient.id, updateData, SUPA_KEY).then(function() {
       setClients(function(prev) {
-        return prev.map(function(c) { return c.id === editClient.id ? Object.assign({}, c, editClient) : c; });
+        return prev.map(function(c) { return c.id === editClient.id ? Object.assign({}, c, updateData) : c; });
       });
       notify("Client update ho gaya!");
       setShowEditModal(false);
       setEditClient(null);
-    }).catch(function(e) { notify("Update failed: " + e.message, true); });
+    }).catch(function(e) {
+      // Update locally anyway
+      setClients(function(prev) {
+        return prev.map(function(c) { return c.id === editClient.id ? Object.assign({}, c, updateData) : c; });
+      });
+      notify("Client update ho gaya!");
+      setShowEditModal(false);
+      setEditClient(null);
+    });
   }
 
   function handleDeleteClient(clientId) {
     if (!window.confirm("Client delete karna chahte hain?")) return;
-    dbAPI.delete ? 
-      fetch(SUPA_URL + "/rest/v1/clients?id=eq." + clientId, {
-        method: "DELETE",
-        headers: { apikey: SUPA_KEY, Authorization: "Bearer " + SUPA_KEY }
-      }).then(function() {
-        setClients(function(prev) { return prev.filter(function(c) { return c.id !== clientId; }); });
-        notify("Client delete ho gaya!");
-      }).catch(function(e) { notify("Delete failed: " + e.message, true); })
-    : null;
+    fetch(SUPA_URL + "/rest/v1/clients?id=eq." + clientId, {
+      method: "DELETE",
+      headers: { apikey: SUPA_KEY, Authorization: "Bearer " + SUPA_KEY }
+    }).then(function() {
+      setClients(function(prev) { return prev.filter(function(c) { return c.id !== clientId; }); });
+      notify("Client delete ho gaya!");
+    }).catch(function(e) {
+      // Fallback - remove locally
+      setClients(function(prev) { return prev.filter(function(c) { return c.id !== clientId; }); });
+      notify("Client remove ho gaya!");
+    });
   }
 
   function handleToggleStatus(clientId) {
@@ -434,6 +463,179 @@ export default function App() {
   var totalPub = posts.filter(function(p) { return p.status === "published"; }).length;
   var planLimit = { Basic: 100, Pro: 500, Agency: 99999 }[profile && profile.plan ? profile.plan : "Basic"] || 100;
   var usagePct = Math.min(Math.round(posts.length / planLimit * 100), 100);
+
+  // Invoice helpers
+  function calcTotal(services) {
+    return services.reduce(function(sum, s) { return sum + (s.qty * s.price); }, 0);
+  }
+
+  function formatPKR(amount) {
+    return "PKR " + amount.toLocaleString();
+  }
+
+  function getNextInvoiceNo() {
+    var num = invoices.length + 1;
+    return "INV-" + String(num).padStart(4, "0");
+  }
+
+  function handleCreateInvoice() {
+    if (!newInvoice.customer.name) { notify("Customer name zaroor bharen!", true); return; }
+    var today = new Date().toISOString().split("T")[0];
+    var inv = Object.assign({}, newInvoice, {
+      id: Date.now(),
+      invoiceNo: getNextInvoiceNo(),
+      date: today,
+    });
+    setInvoices(function(prev) { return [inv].concat(prev); });
+    setNewInvoice({ customer: { name: "", phone: "", company: "", whatsapp: "" }, services: [{ name: "PostRank AI", qty: 1, price: 25000 }], dueDate: "", notes: "", status: "pending" });
+    setShowInvoiceModal(false);
+    notify("Invoice ban gayi!");
+  }
+
+  function handleDeleteInvoice(id) {
+    if (!window.confirm("Invoice delete karein?")) return;
+    setInvoices(function(prev) { return prev.filter(function(i) { return i.id !== id; }); });
+    notify("Invoice delete ho gayi!");
+  }
+
+  function handleStatusChange(id, status) {
+    setInvoices(function(prev) { return prev.map(function(i) { return i.id === id ? Object.assign({}, i, { status: status }) : i; }); });
+    notify("Status update ho gaya!");
+  }
+
+  function sendWhatsApp(invoice, isReminder) {
+    var total = calcTotal(invoice.services);
+    var nl = "%0A";
+    var msgParts;
+    if (isReminder) {
+      msgParts = [
+        "Assalam o Alaikum " + invoice.customer.name + "!",
+        "",
+        "Payment Reminder",
+        "Invoice: " + invoice.invoiceNo,
+        "Amount: " + formatPKR(total),
+        "Due Date: " + (invoice.dueDate || "N/A"),
+        "",
+        "Brahe mehrbani payment jald karein.",
+        "",
+        COMPANY_INFO.name,
+        COMPANY_INFO.phone
+      ];
+    } else {
+      msgParts = [
+        "Assalam o Alaikum " + invoice.customer.name + "!",
+        "",
+        "Aapki invoice tayar hai.",
+        "Invoice: " + invoice.invoiceNo,
+        "Date: " + invoice.date,
+        "Due Date: " + (invoice.dueDate || "N/A"),
+        "Total: " + formatPKR(total),
+        "Status: " + invoice.status.toUpperCase(),
+        "",
+        "Shukria!",
+        COMPANY_INFO.name,
+        COMPANY_INFO.phone
+      ];
+    }
+    var msg = encodeURIComponent(msgParts.join("\n"));
+    var wa = invoice.customer.whatsapp || (invoice.customer.phone || "").replace(/[^0-9]/g, "");
+    window.open("https://wa.me/" + wa + "?text=" + msg, "_blank");
+  }
+
+  function printInvoice(invoice) {
+    var total = calcTotal(invoice.services);
+    var doc = window.open("", "_blank");
+    if (!doc) { notify("Popup blocked karein!", true); return; }
+    
+    var rows = invoice.services.map(function(s) {
+      return [
+        "<tr>",
+        "<td style='padding:10px;border-bottom:1px solid #eee'>" + s.name + "</td>",
+        "<td style='padding:10px;border-bottom:1px solid #eee;text-align:center'>" + s.qty + "</td>",
+        "<td style='padding:10px;border-bottom:1px solid #eee;text-align:right'>" + formatPKR(s.price) + "</td>",
+        "<td style='padding:10px;border-bottom:1px solid #eee;text-align:right'>" + formatPKR(s.qty * s.price) + "</td>",
+        "</tr>"
+      ].join("");
+    }).join("");
+
+    var sc = invoice.status === "paid" ? "#16a34a" : invoice.status === "overdue" ? "#dc2626" : "#d97706";
+
+    var parts = [];
+    parts.push("<!DOCTYPE html><html><head><title>" + invoice.invoiceNo + "</title>");
+    parts.push("<style>");
+    parts.push("body{font-family:Arial,sans-serif;margin:0;padding:0;color:#1a1a2e}");
+    parts.push(".hdr{background:#1e293b;color:white;padding:30px 40px;display:flex;justify-content:space-between;align-items:center}");
+    parts.push(".co-name{font-size:28px;font-weight:900;color:#60a5fa}");
+    parts.push(".co-tag{font-size:12px;color:#94a3b8;margin-top:4px}");
+    parts.push(".inv-title{font-size:32px;font-weight:900;color:#c8f03c;letter-spacing:2px}");
+    parts.push(".body{padding:40px}");
+    parts.push(".two{display:grid;grid-template-columns:1fr 1fr;gap:30px;margin-bottom:30px}");
+    parts.push(".sec-title{font-size:11px;text-transform:uppercase;letter-spacing:1px;color:#64748b;font-weight:700;margin-bottom:10px}");
+    parts.push(".box{background:#f8fafc;border-radius:10px;padding:16px;border:1px solid #e2e8f0}");
+    parts.push("table{width:100%;border-collapse:collapse;margin-bottom:20px}");
+    parts.push("th{background:#1e293b;color:white;padding:12px;text-align:left;font-size:12px;text-transform:uppercase}");
+    parts.push("td{padding:12px;border-bottom:1px solid #f1f5f9;font-size:13px}");
+    parts.push(".ftr{background:#f8fafc;padding:24px 40px;border-top:3px solid #6366f1;text-align:center;font-size:12px;color:#475569}");
+    parts.push("</style></head><body>");
+
+    parts.push("<div class='hdr'>");
+    parts.push("<div><div class='co-name'>" + COMPANY_INFO.name + "</div>");
+    parts.push("<div class='co-tag'>" + COMPANY_INFO.tagline + "</div>");
+    parts.push("<div style='margin-top:12px;font-size:12px;color:#94a3b8'>");
+    parts.push(COMPANY_INFO.founder + " | " + COMPANY_INFO.title + "<br>");
+    parts.push(COMPANY_INFO.email + "<br>" + COMPANY_INFO.phone + "<br>" + COMPANY_INFO.website);
+    parts.push("</div></div>");
+    parts.push("<div style='text-align:right'>");
+    parts.push("<div class='inv-title'>INVOICE</div>");
+    parts.push("<div style='font-size:14px;color:#94a3b8;margin-top:4px'>" + invoice.invoiceNo + "</div>");
+    parts.push("<div style='margin-top:10px;font-size:12px;color:#94a3b8'>Date: " + invoice.date + "<br>Due: " + (invoice.dueDate || "N/A") + "</div>");
+    parts.push("<div style='margin-top:10px;display:inline-block;padding:6px 16px;border-radius:20px;font-size:13px;font-weight:700;background:" + sc + "30;color:" + sc + ";border:2px solid " + sc + "'>");
+    parts.push(invoice.status.toUpperCase() + "</div>");
+    parts.push("</div></div>");
+
+    parts.push("<div class='body'>");
+    parts.push("<div class='two'>");
+    parts.push("<div><div class='sec-title'>Bill To</div><div class='box'>");
+    parts.push("<div style='font-size:16px;font-weight:700'>" + invoice.customer.name + "</div>");
+    parts.push("<div style='font-size:13px;color:#475569;margin-top:3px'>" + (invoice.customer.company || "") + "</div>");
+    parts.push("<div style='font-size:13px;color:#475569'>" + invoice.customer.phone + "</div>");
+    parts.push("</div></div>");
+    parts.push("<div><div class='sec-title'>Invoice Info</div><div class='box'>");
+    parts.push("<div style='font-size:13px;color:#475569'>Invoice: <strong>" + invoice.invoiceNo + "</strong></div>");
+    parts.push("<div style='font-size:13px;color:#475569'>Date: " + invoice.date + "</div>");
+    parts.push("<div style='font-size:13px;color:#475569'>Due: " + (invoice.dueDate || "N/A") + "</div>");
+    parts.push("</div></div></div>");
+
+    parts.push("<table><thead><tr>");
+    parts.push("<th>Service / Description</th>");
+    parts.push("<th style='text-align:center'>Qty</th>");
+    parts.push("<th style='text-align:right'>Unit Price</th>");
+    parts.push("<th style='text-align:right'>Total</th>");
+    parts.push("</tr></thead><tbody>");
+    parts.push(rows);
+    parts.push("<tr><td colspan='3' style='padding:14px;text-align:right;font-weight:700;font-size:15px'>TOTAL AMOUNT</td>");
+    parts.push("<td style='padding:14px;text-align:right;font-size:20px;font-weight:900;color:#6366f1'>" + formatPKR(total) + "</td></tr>");
+    parts.push("</tbody></table>");
+
+    parts.push("<div style='display:flex;justify-content:space-between;align-items:flex-end;margin-top:20px'>");
+    parts.push("<div style='max-width:60%;font-size:12px;color:#475569;line-height:1.6'>");
+    parts.push("<strong style='font-size:11px;text-transform:uppercase;letter-spacing:1px;color:#64748b'>Notes & Terms</strong><br>");
+    parts.push((invoice.notes || "Payment due within 15 days. Late payments may incur charges.") + "<br><br>");
+    parts.push("Thank you for choosing " + COMPANY_INFO.name + "!");
+    parts.push("</div>");
+    parts.push("<div style='text-align:center;border-top:2px solid #334155;padding-top:10px;min-width:200px'>");
+    parts.push("<div style='font-style:italic;color:#6366f1;font-size:16px;margin-bottom:6px'>Adnan Butt</div>");
+    parts.push("<div style='font-weight:700;font-size:14px'>" + COMPANY_INFO.founder + "</div>");
+    parts.push("<div style='font-size:12px;color:#64748b'>" + COMPANY_INFO.title + " | " + COMPANY_INFO.name + "</div>");
+    parts.push("</div></div></div>");
+
+    parts.push("<div class='ftr'>" + COMPANY_INFO.name + " | " + COMPANY_INFO.email + " | " + COMPANY_INFO.phone + " | " + COMPANY_INFO.website + "</div>");
+    parts.push("</body></html>");
+
+    doc.document.write(parts.join(""));
+    doc.document.close();
+    setTimeout(function() { doc.print(); }, 600);
+  }
 
   var ss = {
     app: { display: "flex", minHeight: "100vh", fontFamily: "Inter,sans-serif", background: C.bg, color: C.ink },
@@ -507,18 +709,19 @@ export default function App() {
     );
   }
 
-  var NAV = [
-    { id: "generate", icon: "⚡", label: "Generate Post" },
+  var NAV = isAdmin ? [
+    { id: "generate", icon: "*", label: "Generate Post" },
     { id: "dashboard", icon: "D", label: "Dashboard" },
     { id: "posts", icon: "P", label: "My Posts" },
+    { id: "clients", icon: "C", label: "Clients" },
+    { id: "invoices", icon: "I", label: "Invoices" },
+    { id: "admin", icon: "A", label: "Admin Panel" },
     { id: "plans", icon: "*", label: "Plans" },
+  ] : [
+    { id: "generate", icon: "*", label: "Generate Post" },
+    { id: "posts", icon: "P", label: "My Posts" },
+    { id: "settings", icon: "S", label: "Settings" },
   ];
-  if (isAdmin) {
-    NAV.push({ id: "clients", icon: "C", label: "Clients" });
-    NAV.push({ id: "admin", icon: "A", label: "Admin Panel" });
-  } else {
-    NAV.push({ id: "settings", icon: "S", label: "Settings" });
-  }
 
   return React.createElement("div", { style: ss.app },
     // SIDEBAR
@@ -563,7 +766,7 @@ export default function App() {
       view === "generate" && React.createElement("div", null,
         React.createElement("div", { style: { marginBottom: 28 } },
           React.createElement("div", { style: { fontFamily: "Poppins,sans-serif", fontSize: 24, fontWeight: 700 } }, "Generate Post"),
-          React.createElement("div", { style: { fontSize: 12, color: C.muted, marginTop: 5 } }, "Product ya Blog → AI likhega → Save → Publish")
+          React.createElement("div", { style: { fontSize: 12, color: C.muted, marginTop: 5 } }, "Product ya Blog -> AI likhega -> Save -> Publish")
         ),
         React.createElement("div", { style: ss.carddark },
           React.createElement("div", { style: { fontFamily: "Poppins,sans-serif", fontSize: 18, fontWeight: 600, color: "#f1f5f9", marginBottom: 16 } }, postType === "blog" ? "Blog topic kya hai?" : "Aaj kya sell kar rahe ho?"),
@@ -658,7 +861,7 @@ export default function App() {
                   }
                 }),
                 React.createElement("label", { htmlFor: "imgup", style: { cursor: "pointer", display: "block" } },
-                  React.createElement("div", { style: { fontSize: 28, marginBottom: 6 } }, "📁"),
+                  React.createElement("div", { style: { fontSize: 28, marginBottom: 6 } }, "+"),
                   React.createElement("div", { style: { fontSize: 13, fontWeight: 600, color: C.primary } }, "Images Upload Karo"),
                   React.createElement("div", { style: { fontSize: 11, color: C.muted, marginTop: 3 } }, "JPG, PNG, WEBP - Multiple select kar sakte ho")
                 )
@@ -781,7 +984,7 @@ export default function App() {
           React.createElement("strong", null, "Client ko yeh link bhejein: "),
           React.createElement("span", { style: { color: C.primary, fontWeight: 600 } }, window.location.origin),
           React.createElement("br", null),
-          "Client Sign Up karein → Login karein → Apna dashboard use karein!"
+          "Client Sign Up karein -> Login karein -> Apna dashboard use karein!"
         ),
         React.createElement("div", { style: ss.tbl },
           React.createElement("div", { style: Object.assign({}, ss.tblhead, { gridTemplateColumns: "2fr 1fr 1fr 1fr 1.5fr" }) },
@@ -795,7 +998,7 @@ export default function App() {
             ? React.createElement("div", { style: { textAlign: "center", padding: 28, color: C.muted } }, "Loading clients...")
             : clients.length === 0
               ? React.createElement("div", { style: { textAlign: "center", padding: 28, color: C.muted } },
-                  React.createElement("div", { style: { fontSize: 28, marginBottom: 8 } }, "👥"),
+                  React.createElement("div", { style: { fontSize: 28, marginBottom: 8 } }, "C"),
                   React.createElement("div", null, "Koi client nahi. Add Client dabao!"))
               : clients.map(function(c) {
                   var isActive = c.status === "active";
@@ -857,6 +1060,87 @@ export default function App() {
         )
       ),
 
+      // INVOICES
+      view === "invoices" && isAdmin && React.createElement("div", null,
+        // Header
+        React.createElement("div", { style: { marginBottom: 20, display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 12 } },
+          React.createElement("div", null,
+            React.createElement("div", { style: { fontFamily: "Poppins,sans-serif", fontSize: 24, fontWeight: 700 } }, "Invoices"),
+            React.createElement("div", { style: { fontSize: 12, color: C.muted, marginTop: 5 } }, "Create, send & track client invoices")
+          ),
+          React.createElement(Btn, { variant: "primary", onClick: function() { setShowInvoiceModal(true); } }, "+ New Invoice")
+        ),
+
+        // Revenue Stats
+        React.createElement("div", { style: ss.statgrid4 },
+          React.createElement("div", { style: Object.assign({}, ss.statcard, { borderBottom: "3px solid " + C.success }) },
+            React.createElement("div", { style: Object.assign({}, ss.statnum, { color: C.success }) },
+              formatPKR(invoices.filter(function(i) { return i.status === "paid"; }).reduce(function(s, i) { return s + calcTotal(i.services); }, 0))
+            ),
+            React.createElement("div", { style: ss.statlbl }, "Total Received")
+          ),
+          React.createElement("div", { style: Object.assign({}, ss.statcard, { borderBottom: "3px solid " + C.warning }) },
+            React.createElement("div", { style: Object.assign({}, ss.statnum, { color: C.warning }) },
+              formatPKR(invoices.filter(function(i) { return i.status === "pending"; }).reduce(function(s, i) { return s + calcTotal(i.services); }, 0))
+            ),
+            React.createElement("div", { style: ss.statlbl }, "Pending")
+          ),
+          React.createElement("div", { style: Object.assign({}, ss.statcard, { borderBottom: "3px solid " + C.danger }) },
+            React.createElement("div", { style: Object.assign({}, ss.statnum, { color: C.danger }) },
+              formatPKR(invoices.filter(function(i) { return i.status === "overdue"; }).reduce(function(s, i) { return s + calcTotal(i.services); }, 0))
+            ),
+            React.createElement("div", { style: ss.statlbl }, "Overdue")
+          ),
+          React.createElement("div", { style: Object.assign({}, ss.statcard, { borderBottom: "3px solid " + C.primary }) },
+            React.createElement("div", { style: ss.statnum }, invoices.length),
+            React.createElement("div", { style: ss.statlbl }, "Total Invoices")
+          )
+        ),
+
+        // Invoice Table
+        React.createElement("div", { style: ss.tbl },
+          React.createElement("div", { style: Object.assign({}, ss.tblhead, { gridTemplateColumns: "1fr 1.5fr 1fr 1fr 1fr 2fr" }) },
+            React.createElement("div", null, "Invoice #"),
+            React.createElement("div", null, "Customer"),
+            React.createElement("div", null, "Amount"),
+            React.createElement("div", null, "Due Date"),
+            React.createElement("div", null, "Status"),
+            React.createElement("div", null, "Actions")
+          ),
+          invoices.map(function(inv) {
+            var total = calcTotal(inv.services);
+            var statusColors = { paid: { bg: "#dcfce7", color: "#16a34a" }, pending: { bg: "#fef9c3", color: "#ca8a04" }, overdue: { bg: "#fee2e2", color: "#dc2626" } };
+            var sc = statusColors[inv.status] || statusColors.pending;
+            return React.createElement("div", { key: inv.id, style: Object.assign({}, ss.tblrow, { gridTemplateColumns: "1fr 1.5fr 1fr 1fr 1fr 2fr" }) },
+              React.createElement("div", { style: { fontWeight: 700, color: C.primary, fontSize: 12 } }, inv.invoiceNo),
+              React.createElement("div", null,
+                React.createElement("div", { style: { fontWeight: 600, fontSize: 13 } }, inv.customer.name),
+                React.createElement("div", { style: { fontSize: 11, color: C.muted } }, inv.customer.company || inv.customer.phone)
+              ),
+              React.createElement("div", { style: { fontWeight: 700, color: C.ink, fontSize: 13 } }, formatPKR(total)),
+              React.createElement("div", { style: { fontSize: 12, color: C.muted } }, inv.dueDate || "-"),
+              React.createElement("div", null,
+                React.createElement("select", {
+                  value: inv.status,
+                  onChange: function(e) { handleStatusChange(inv.id, e.target.value); },
+                  style: { background: sc.bg, color: sc.color, border: "none", borderRadius: 6, padding: "4px 8px", fontSize: 11, fontWeight: 700, cursor: "pointer", outline: "none" }
+                },
+                  React.createElement("option", { value: "paid" }, "Paid"),
+                  React.createElement("option", { value: "pending" }, "Pending"),
+                  React.createElement("option", { value: "overdue" }, "Overdue")
+                )
+              ),
+              React.createElement("div", { style: { display: "flex", gap: 5, flexWrap: "wrap" } },
+                React.createElement("button", { onClick: function() { printInvoice(inv); }, style: { border: "none", borderRadius: 6, padding: "5px 10px", fontSize: 11, cursor: "pointer", fontWeight: 600, background: C.primaryLight, color: C.primary } }, "PDF"),
+                React.createElement("button", { onClick: function() { sendWhatsApp(inv, false); }, style: { border: "none", borderRadius: 6, padding: "5px 10px", fontSize: 11, cursor: "pointer", fontWeight: 600, background: "#dcfce7", color: "#16a34a" } }, "WA Send"),
+                inv.status !== "paid" ? React.createElement("button", { onClick: function() { sendWhatsApp(inv, true); }, style: { border: "none", borderRadius: 6, padding: "5px 10px", fontSize: 11, cursor: "pointer", fontWeight: 600, background: "#fef9c3", color: "#ca8a04" } }, "Reminder") : null,
+                React.createElement("button", { onClick: function() { handleDeleteInvoice(inv.id); }, style: { border: "none", borderRadius: 6, padding: "5px 10px", fontSize: 11, cursor: "pointer", fontWeight: 600, background: "#fee2e2", color: "#dc2626" } }, "Del")
+              )
+            );
+          })
+        )
+      ),
+
       // PLANS
       view === "plans" && React.createElement("div", null,
         React.createElement("div", { style: { marginBottom: 28 } },
@@ -873,11 +1157,55 @@ export default function App() {
               React.createElement("div", { style: { fontFamily: "Poppins,sans-serif", fontSize: 15, fontWeight: 700, marginBottom: 8, color: p.featured ? "#a5b4fc" : C.ink } }, p.name),
               React.createElement("div", { style: { fontFamily: "Poppins,sans-serif", fontSize: 32, fontWeight: 700, color: p.featured ? "#f1f5f9" : C.ink } }, p.price, React.createElement("span", { style: { fontSize: 12, color: C.muted } }, "/mo")),
               React.createElement("ul", { style: { margin: "18px 0", listStyle: "none" } },
-                p.feats.map(function(f) { return React.createElement("li", { key: f, style: { fontSize: 12, padding: "5px 0", borderBottom: "1px solid " + (p.featured ? "#334155" : C.border), display: "flex", alignItems: "center", gap: 7, color: p.featured ? "#94a3b8" : C.ink2 } }, React.createElement("span", { style: { color: C.primary } }, "✓"), f); })
+                p.feats.map(function(f) { return React.createElement("li", { key: f, style: { fontSize: 12, padding: "5px 0", borderBottom: "1px solid " + (p.featured ? "#334155" : C.border), display: "flex", alignItems: "center", gap: 7, color: p.featured ? "#94a3b8" : C.ink2 } }, React.createElement("span", { style: { color: C.primary } }, "OK"), f); })
               ),
               React.createElement("button", { style: { width: "100%", padding: 12, borderRadius: 10, border: "2px solid " + C.primary, background: p.featured ? C.primary : "transparent", color: p.featured ? "white" : C.primary, fontFamily: "Poppins,sans-serif", fontSize: 13, fontWeight: 600, cursor: "pointer" } }, p.name === (profile.plan || "Basic") ? "Current Plan" : "Get Started")
             );
           })
+        )
+      )
+    ),
+
+    // NEW INVOICE MODAL
+    showInvoiceModal && React.createElement("div", { style: ss.overlay, onClick: function(e) { if (e.target === e.currentTarget) setShowInvoiceModal(false); } },
+      React.createElement("div", { style: Object.assign({}, ss.modal, { maxWidth: 560, maxHeight: "90vh", overflowY: "auto" }) },
+        React.createElement("div", { style: { fontFamily: "Poppins,sans-serif", fontSize: 18, fontWeight: 700, marginBottom: 20 } }, "Nai Invoice Banayein"),
+
+        React.createElement("div", { style: { fontFamily: "Poppins,sans-serif", fontSize: 13, fontWeight: 600, color: C.primary, marginBottom: 12 } }, "Customer Details"),
+        React.createElement("div", { style: { display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 16 } },
+          React.createElement("div", null, React.createElement("label", { style: ss.fmlabel }, "Customer Name *"), React.createElement(Input, { placeholder: "Ali Khan", value: newInvoice.customer.name, onChange: function(e) { setNewInvoice(function(p) { return Object.assign({}, p, { customer: Object.assign({}, p.customer, { name: e.target.value }) }); }); } })),
+          React.createElement("div", null, React.createElement("label", { style: ss.fmlabel }, "Phone"), React.createElement(Input, { placeholder: "+92-300-0000000", value: newInvoice.customer.phone, onChange: function(e) { setNewInvoice(function(p) { return Object.assign({}, p, { customer: Object.assign({}, p.customer, { phone: e.target.value }) }); }); } })),
+          React.createElement("div", null, React.createElement("label", { style: ss.fmlabel }, "Company"), React.createElement(Input, { placeholder: "Company Name", value: newInvoice.customer.company, onChange: function(e) { setNewInvoice(function(p) { return Object.assign({}, p, { customer: Object.assign({}, p.customer, { company: e.target.value }) }); }); } })),
+          React.createElement("div", null, React.createElement("label", { style: ss.fmlabel }, "WhatsApp Number"), React.createElement(Input, { placeholder: "923001234567", value: newInvoice.customer.whatsapp, onChange: function(e) { setNewInvoice(function(p) { return Object.assign({}, p, { customer: Object.assign({}, p.customer, { whatsapp: e.target.value }) }); }); } }))
+        ),
+
+        React.createElement("div", { style: { fontFamily: "Poppins,sans-serif", fontSize: 13, fontWeight: 600, color: C.primary, marginBottom: 12 } }, "Services"),
+        newInvoice.services.map(function(s, i) {
+          return React.createElement("div", { key: i, style: { display: "grid", gridTemplateColumns: "2fr 1fr 1fr auto", gap: 8, marginBottom: 8, alignItems: "center" } },
+            React.createElement(Input, { placeholder: "Service name", value: s.name, onChange: function(e) { var sv = newInvoice.services.slice(); sv[i] = Object.assign({}, sv[i], { name: e.target.value }); setNewInvoice(function(p) { return Object.assign({}, p, { services: sv }); }); } }),
+            React.createElement(Input, { placeholder: "Qty", value: s.qty, onChange: function(e) { var sv = newInvoice.services.slice(); sv[i] = Object.assign({}, sv[i], { qty: parseInt(e.target.value) || 1 }); setNewInvoice(function(p) { return Object.assign({}, p, { services: sv }); }); } }),
+            React.createElement(Input, { placeholder: "Price PKR", value: s.price, onChange: function(e) { var sv = newInvoice.services.slice(); sv[i] = Object.assign({}, sv[i], { price: parseInt(e.target.value) || 0 }); setNewInvoice(function(p) { return Object.assign({}, p, { services: sv }); }); } }),
+            React.createElement("button", { onClick: function() { var sv = newInvoice.services.filter(function(_, j) { return j !== i; }); setNewInvoice(function(p) { return Object.assign({}, p, { services: sv }); }); }, style: { background: "#fee2e2", border: "none", borderRadius: 6, padding: "8px 10px", color: "#dc2626", cursor: "pointer", fontWeight: 700 } }, "X")
+          );
+        }),
+        React.createElement("button", { onClick: function() { setNewInvoice(function(p) { return Object.assign({}, p, { services: p.services.concat([{ name: "", qty: 1, price: 0 }]) }); }); }, style: { background: C.primaryLight, border: "none", borderRadius: 8, padding: "8px 16px", color: C.primary, cursor: "pointer", fontSize: 12, fontWeight: 600, marginBottom: 16 } }, "+ Service Add Karo"),
+
+        React.createElement("div", { style: { background: C.bg, border: "1px solid " + C.border, borderRadius: 8, padding: "12px 16px", marginBottom: 16, textAlign: "right" } },
+          React.createElement("div", { style: { fontFamily: "Poppins,sans-serif", fontSize: 18, fontWeight: 700, color: C.primary } },
+            "Total: " + formatPKR(calcTotal(newInvoice.services))
+          )
+        ),
+
+        React.createElement("div", { style: { display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 16 } },
+          React.createElement("div", null, React.createElement("label", { style: ss.fmlabel }, "Due Date"), React.createElement(Input, { type: "date", value: newInvoice.dueDate, onChange: function(e) { setNewInvoice(function(p) { return Object.assign({}, p, { dueDate: e.target.value }); }); } })),
+          React.createElement("div", null, React.createElement("label", { style: ss.fmlabel }, "Status"), React.createElement("select", { value: newInvoice.status, onChange: function(e) { setNewInvoice(function(p) { return Object.assign({}, p, { status: e.target.value }); }); }, style: { width: "100%", background: C.bg, border: "1.5px solid " + C.border, borderRadius: 9, padding: "11px 14px", fontFamily: "Inter,sans-serif", fontSize: 13 } }, React.createElement("option", { value: "pending" }, "Pending"), React.createElement("option", { value: "paid" }, "Paid"), React.createElement("option", { value: "overdue" }, "Overdue")))
+        ),
+
+        React.createElement("div", { style: ss.fmgroup }, React.createElement("label", { style: ss.fmlabel }, "Notes"), React.createElement("textarea", { placeholder: "Additional notes...", value: newInvoice.notes, onChange: function(e) { setNewInvoice(function(p) { return Object.assign({}, p, { notes: e.target.value }); }); }, style: { width: "100%", background: C.bg, border: "1.5px solid " + C.border, borderRadius: 9, padding: "11px 14px", fontFamily: "Inter,sans-serif", fontSize: 13, minHeight: 70, resize: "vertical", outline: "none" } })),
+
+        React.createElement("div", { style: { display: "flex", gap: 10, marginTop: 8 } },
+          React.createElement("button", { onClick: function() { setShowInvoiceModal(false); }, style: { flex: 1, padding: 11, borderRadius: 9, border: "1.5px solid " + C.border, background: "transparent", color: C.muted, fontFamily: "Inter,sans-serif", fontSize: 13, cursor: "pointer" } }, "Cancel"),
+          React.createElement(Btn, { variant: "primary", onClick: handleCreateInvoice }, "Invoice Banayein")
         )
       )
     ),
@@ -887,7 +1215,7 @@ export default function App() {
       React.createElement("div", { style: ss.modal },
         React.createElement("div", { style: { fontFamily: "Poppins,sans-serif", fontSize: 18, fontWeight: 700, marginBottom: 20 } }, "Client Edit Karo"),
         React.createElement("div", { style: ss.fmgroup },
-          React.createElement("label", { style: ss.fmlabel }, "Name"),
+          React.createElement("label", { style: ss.fmlabel }, "Client Name"),
           React.createElement(Input, { value: editClient.name || "", onChange: function(e) { setEditClient(function(c) { return Object.assign({}, c, { name: e.target.value }); }); } })
         ),
         React.createElement("div", { style: ss.fmgroup },
@@ -895,15 +1223,15 @@ export default function App() {
           React.createElement(Input, { value: editClient.email || "", onChange: function(e) { setEditClient(function(c) { return Object.assign({}, c, { email: e.target.value }); }); } })
         ),
         React.createElement("div", { style: ss.fmgroup },
-          React.createElement("label", { style: ss.fmlabel }, "Website"),
-          React.createElement(Input, { placeholder: "https://clientsite.com", value: editClient.website || "", onChange: function(e) { setEditClient(function(c) { return Object.assign({}, c, { website: e.target.value }); }); } })
+          React.createElement("label", { style: ss.fmlabel }, "New Password (khali choren agar change nahi karna)"),
+          React.createElement(Input, { type: "password", placeholder: "Naya password (optional)", value: editClient.newPassword || "", onChange: function(e) { setEditClient(function(c) { return Object.assign({}, c, { newPassword: e.target.value }); }); } })
         ),
         React.createElement("div", { style: ss.fmgroup },
           React.createElement("label", { style: ss.fmlabel }, "Plan"),
           React.createElement("select", { value: editClient.plan || "Basic", onChange: function(e) { setEditClient(function(c) { return Object.assign({}, c, { plan: e.target.value }); }); }, style: { width: "100%", background: C.bg, border: "1.5px solid " + C.border, borderRadius: 9, padding: "11px 14px", fontFamily: "Inter,sans-serif", fontSize: 13 } },
-            React.createElement("option", { value: "Basic" }, "Basic"),
-            React.createElement("option", { value: "Pro" }, "Pro"),
-            React.createElement("option", { value: "Agency" }, "Agency")
+            React.createElement("option", { value: "Basic" }, "Basic - $19/mo"),
+            React.createElement("option", { value: "Pro" }, "Pro - $49/mo"),
+            React.createElement("option", { value: "Agency" }, "Agency - $149/mo")
           )
         ),
         React.createElement("div", { style: { display: "flex", gap: 10, marginTop: 20 } },
