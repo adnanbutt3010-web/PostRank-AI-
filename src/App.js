@@ -1496,4 +1496,166 @@ export default function App() {
         // Invoice Table
         React.createElement("div", { style: ss.tbl },
           React.createElement("div", { style: Object.assign({}, ss.tblhead, { gridTemplateColumns: "1fr 1.5fr 1fr 1fr 1fr 2fr" }) },
-            React.createElement("div", null, "Invo
+            React.createElement("div", null, "Invoice #"),
+            React.createElement("div", null, "Customer"),
+            React.createElement("div", null, "Amount"),
+            React.createElement("div", null, "Due Date"),
+            React.createElement("div", null, "Status"),
+            React.createElement("div", null, "Actions")
+          ),
+          invoices.map(function(inv) {
+            var total = calcTotal(inv.services);
+            var statusColors = { paid: { bg: "#dcfce7", color: "#16a34a" }, pending: { bg: "#fef9c3", color: "#ca8a04" }, overdue: { bg: "#fee2e2", color: "#dc2626" } };
+            var sc = statusColors[inv.status] || statusColors.pending;
+            return React.createElement("div", { key: inv.id, style: Object.assign({}, ss.tblrow, { gridTemplateColumns: "1fr 1.5fr 1fr 1fr 1fr 2fr" }) },
+              React.createElement("div", { style: { fontWeight: 700, color: C.primary, fontSize: 12 } }, inv.invoiceNo),
+              React.createElement("div", null,
+                React.createElement("div", { style: { fontWeight: 600, fontSize: 13 } }, inv.customer.name),
+                React.createElement("div", { style: { fontSize: 11, color: C.muted } }, inv.customer.company || inv.customer.phone)
+              ),
+              React.createElement("div", { style: { fontWeight: 700, color: C.ink, fontSize: 13 } }, formatPKR(total)),
+              React.createElement("div", { style: { fontSize: 12, color: C.muted } }, inv.dueDate || "-"),
+              React.createElement("div", null,
+                React.createElement("select", {
+                  value: inv.status,
+                  onChange: function(e) { handleStatusChange(inv.id, e.target.value); },
+                  style: { background: sc.bg, color: sc.color, border: "none", borderRadius: 6, padding: "4px 8px", fontSize: 11, fontWeight: 700, cursor: "pointer", outline: "none" }
+                },
+                  React.createElement("option", { value: "paid" }, "Paid"),
+                  React.createElement("option", { value: "pending" }, "Pending"),
+                  React.createElement("option", { value: "overdue" }, "Overdue")
+                )
+              ),
+              React.createElement("div", { style: { display: "flex", gap: 5, flexWrap: "wrap" } },
+                React.createElement("button", { onClick: function() { downloadInvoicePDF(inv); }, style: { border: "none", borderRadius: 6, padding: "5px 10px", fontSize: 11, cursor: "pointer", fontWeight: 600, background: C.primaryLight, color: C.primary } }, "PDF Save"),
+                React.createElement("button", { onClick: function() { printInvoice(inv); }, style: { border: "none", borderRadius: 6, padding: "5px 10px", fontSize: 11, cursor: "pointer", fontWeight: 600, background: "#f3f4f6", color: "#374151" } }, "Print"),
+                React.createElement("button", { onClick: function() { sendWhatsApp(inv, false); }, style: { border: "none", borderRadius: 6, padding: "5px 10px", fontSize: 11, cursor: "pointer", fontWeight: 600, background: "#dcfce7", color: "#16a34a" } }, "WA Send"),
+                inv.status !== "paid" ? React.createElement("button", { onClick: function() { sendWhatsApp(inv, true); }, style: { border: "none", borderRadius: 6, padding: "5px 10px", fontSize: 11, cursor: "pointer", fontWeight: 600, background: "#fef9c3", color: "#ca8a04" } }, "Reminder") : null,
+                React.createElement("button", { onClick: function() { handleDeleteInvoice(inv.id); }, style: { border: "none", borderRadius: 6, padding: "5px 10px", fontSize: 11, cursor: "pointer", fontWeight: 600, background: "#fee2e2", color: "#dc2626" } }, "Del")
+              )
+            );
+          })
+        )
+      ),
+
+      // PLANS
+      view === "plans" && React.createElement("div", null,
+        React.createElement("div", { style: { marginBottom: 28 } },
+          React.createElement("div", { style: { fontFamily: "Poppins,sans-serif", fontSize: 24, fontWeight: 700 } }, "Plans"),
+          React.createElement("div", { style: { fontSize: 12, color: C.muted, marginTop: 5 } }, "Simple monthly billing")
+        ),
+        React.createElement("div", { style: ss.plansgrid },
+          [{ name: "Basic", price: "$19", feats: ["100 posts/month","SEO optimization","1 website","Email support"], featured: false },
+           { name: "Pro", price: "$49", feats: ["500 posts/month","Advanced SEO","5 websites","Priority support","Analytics"], featured: true },
+           { name: "Agency", price: "$149", feats: ["Unlimited posts","Full SEO suite","Unlimited websites","Dedicated support","White-label","API access"], featured: false }
+          ].map(function(p) {
+            return React.createElement("div", { key: p.name, style: Object.assign({}, ss.plancard, p.featured ? { background: "#1e293b", borderColor: C.primary } : {}) },
+              p.featured ? React.createElement("div", { style: { position: "absolute", top: -11, left: "50%", transform: "translateX(-50%)", background: C.primary, color: "white", fontSize: 9, fontWeight: 700, padding: "4px 14px", borderRadius: 20, whiteSpace: "nowrap" } }, "Most Popular") : null,
+              React.createElement("div", { style: { fontFamily: "Poppins,sans-serif", fontSize: 15, fontWeight: 700, marginBottom: 8, color: p.featured ? "#a5b4fc" : C.ink } }, p.name),
+              React.createElement("div", { style: { fontFamily: "Poppins,sans-serif", fontSize: 32, fontWeight: 700, color: p.featured ? "#f1f5f9" : C.ink } }, p.price, React.createElement("span", { style: { fontSize: 12, color: C.muted } }, "/mo")),
+              React.createElement("ul", { style: { margin: "18px 0", listStyle: "none" } },
+                p.feats.map(function(f) { return React.createElement("li", { key: f, style: { fontSize: 12, padding: "5px 0", borderBottom: "1px solid " + (p.featured ? "#334155" : C.border), display: "flex", alignItems: "center", gap: 7, color: p.featured ? "#94a3b8" : C.ink2 } }, React.createElement("span", { style: { color: C.primary } }, "OK"), f); })
+              ),
+              React.createElement("button", { style: { width: "100%", padding: 12, borderRadius: 10, border: "2px solid " + C.primary, background: p.featured ? C.primary : "transparent", color: p.featured ? "white" : C.primary, fontFamily: "Poppins,sans-serif", fontSize: 13, fontWeight: 600, cursor: "pointer" } }, p.name === (profile.plan || "Basic") ? "Current Plan" : "Get Started")
+            );
+          })
+        )
+      )
+    ),
+
+    // NEW INVOICE MODAL
+    showInvoiceModal && React.createElement("div", { style: ss.overlay, onClick: function(e) { if (e.target === e.currentTarget) setShowInvoiceModal(false); } },
+      React.createElement("div", { style: Object.assign({}, ss.modal, { maxWidth: 560, maxHeight: "90vh", overflowY: "auto" }) },
+        React.createElement("div", { style: { fontFamily: "Poppins,sans-serif", fontSize: 18, fontWeight: 700, marginBottom: 20 } }, "Nai Invoice Banayein"),
+
+        React.createElement("div", { style: { fontFamily: "Poppins,sans-serif", fontSize: 13, fontWeight: 600, color: C.primary, marginBottom: 12 } }, "Customer Details"),
+        React.createElement("div", { style: { display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 16 } },
+          React.createElement("div", null, React.createElement("label", { style: ss.fmlabel }, "Customer Name *"), React.createElement(Input, { placeholder: "Ali Khan", value: newInvoice.customer.name, onChange: function(e) { setNewInvoice(function(p) { return Object.assign({}, p, { customer: Object.assign({}, p.customer, { name: e.target.value }) }); }); } })),
+          React.createElement("div", null, React.createElement("label", { style: ss.fmlabel }, "Phone"), React.createElement(Input, { placeholder: "+92-300-0000000", value: newInvoice.customer.phone, onChange: function(e) { setNewInvoice(function(p) { return Object.assign({}, p, { customer: Object.assign({}, p.customer, { phone: e.target.value }) }); }); } })),
+          React.createElement("div", null, React.createElement("label", { style: ss.fmlabel }, "Company"), React.createElement(Input, { placeholder: "Company Name", value: newInvoice.customer.company, onChange: function(e) { setNewInvoice(function(p) { return Object.assign({}, p, { customer: Object.assign({}, p.customer, { company: e.target.value }) }); }); } })),
+          React.createElement("div", null, React.createElement("label", { style: ss.fmlabel }, "WhatsApp Number"), React.createElement(Input, { placeholder: "923001234567", value: newInvoice.customer.whatsapp, onChange: function(e) { setNewInvoice(function(p) { return Object.assign({}, p, { customer: Object.assign({}, p.customer, { whatsapp: e.target.value }) }); }); } }))
+        ),
+
+        React.createElement("div", { style: { fontFamily: "Poppins,sans-serif", fontSize: 13, fontWeight: 600, color: C.primary, marginBottom: 12 } }, "Services"),
+        newInvoice.services.map(function(s, i) {
+          return React.createElement("div", { key: i, style: { display: "grid", gridTemplateColumns: "2fr 1fr 1fr auto", gap: 8, marginBottom: 8, alignItems: "center" } },
+            React.createElement(Input, { placeholder: "Service name", value: s.name, onChange: function(e) { var sv = newInvoice.services.slice(); sv[i] = Object.assign({}, sv[i], { name: e.target.value }); setNewInvoice(function(p) { return Object.assign({}, p, { services: sv }); }); } }),
+            React.createElement(Input, { placeholder: "Qty", value: s.qty, onChange: function(e) { var sv = newInvoice.services.slice(); sv[i] = Object.assign({}, sv[i], { qty: parseInt(e.target.value) || 1 }); setNewInvoice(function(p) { return Object.assign({}, p, { services: sv }); }); } }),
+            React.createElement(Input, { placeholder: "Price PKR", value: s.price, onChange: function(e) { var sv = newInvoice.services.slice(); sv[i] = Object.assign({}, sv[i], { price: parseInt(e.target.value) || 0 }); setNewInvoice(function(p) { return Object.assign({}, p, { services: sv }); }); } }),
+            React.createElement("button", { onClick: function() { var sv = newInvoice.services.filter(function(_, j) { return j !== i; }); setNewInvoice(function(p) { return Object.assign({}, p, { services: sv }); }); }, style: { background: "#fee2e2", border: "none", borderRadius: 6, padding: "8px 10px", color: "#dc2626", cursor: "pointer", fontWeight: 700 } }, "X")
+          );
+        }),
+        React.createElement("button", { onClick: function() { setNewInvoice(function(p) { return Object.assign({}, p, { services: p.services.concat([{ name: "", qty: 1, price: 0 }]) }); }); }, style: { background: C.primaryLight, border: "none", borderRadius: 8, padding: "8px 16px", color: C.primary, cursor: "pointer", fontSize: 12, fontWeight: 600, marginBottom: 16 } }, "+ Service Add Karo"),
+
+        React.createElement("div", { style: { background: C.bg, border: "1px solid " + C.border, borderRadius: 8, padding: "12px 16px", marginBottom: 16, textAlign: "right" } },
+          React.createElement("div", { style: { fontFamily: "Poppins,sans-serif", fontSize: 18, fontWeight: 700, color: C.primary } },
+            "Total: " + formatPKR(calcTotal(newInvoice.services))
+          )
+        ),
+
+        React.createElement("div", { style: { display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 16 } },
+          React.createElement("div", null, React.createElement("label", { style: ss.fmlabel }, "Due Date"), React.createElement(Input, { type: "date", value: newInvoice.dueDate, onChange: function(e) { setNewInvoice(function(p) { return Object.assign({}, p, { dueDate: e.target.value }); }); } })),
+          React.createElement("div", null, React.createElement("label", { style: ss.fmlabel }, "Status"), React.createElement("select", { value: newInvoice.status, onChange: function(e) { setNewInvoice(function(p) { return Object.assign({}, p, { status: e.target.value }); }); }, style: { width: "100%", background: C.bg, border: "1.5px solid " + C.border, borderRadius: 9, padding: "11px 14px", fontFamily: "Inter,sans-serif", fontSize: 13 } }, React.createElement("option", { value: "pending" }, "Pending"), React.createElement("option", { value: "paid" }, "Paid"), React.createElement("option", { value: "overdue" }, "Overdue")))
+        ),
+
+        React.createElement("div", { style: ss.fmgroup }, React.createElement("label", { style: ss.fmlabel }, "Notes"), React.createElement("textarea", { placeholder: "Additional notes...", value: newInvoice.notes, onChange: function(e) { setNewInvoice(function(p) { return Object.assign({}, p, { notes: e.target.value }); }); }, style: { width: "100%", background: C.bg, border: "1.5px solid " + C.border, borderRadius: 9, padding: "11px 14px", fontFamily: "Inter,sans-serif", fontSize: 13, minHeight: 70, resize: "vertical", outline: "none" } })),
+
+        React.createElement("div", { style: { display: "flex", gap: 10, marginTop: 8 } },
+          React.createElement("button", { onClick: function() { setShowInvoiceModal(false); }, style: { flex: 1, padding: 11, borderRadius: 9, border: "1.5px solid " + C.border, background: "transparent", color: C.muted, fontFamily: "Inter,sans-serif", fontSize: 13, cursor: "pointer" } }, "Cancel"),
+          React.createElement(Btn, { variant: "primary", onClick: handleCreateInvoice }, "Invoice Banayein")
+        )
+      )
+    ),
+
+    // EDIT CLIENT MODAL
+    showEditModal && editClient && React.createElement("div", { style: ss.overlay, onClick: function(e) { if (e.target === e.currentTarget) setShowEditModal(false); } },
+      React.createElement("div", { style: ss.modal },
+        React.createElement("div", { style: { fontFamily: "Poppins,sans-serif", fontSize: 18, fontWeight: 700, marginBottom: 20 } }, "Client Edit Karo"),
+        React.createElement("div", { style: ss.fmgroup },
+          React.createElement("label", { style: ss.fmlabel }, "Client Name"),
+          React.createElement(Input, { value: editClient.name || "", onChange: function(e) { setEditClient(function(c) { return Object.assign({}, c, { name: e.target.value }); }); } })
+        ),
+        React.createElement("div", { style: ss.fmgroup },
+          React.createElement("label", { style: ss.fmlabel }, "Email"),
+          React.createElement(Input, { value: editClient.email || "", onChange: function(e) { setEditClient(function(c) { return Object.assign({}, c, { email: e.target.value }); }); } })
+        ),
+        React.createElement("div", { style: ss.fmgroup },
+          React.createElement("label", { style: ss.fmlabel }, "New Password (khali choren agar change nahi karna)"),
+          React.createElement(Input, { type: "password", placeholder: "Naya password (optional)", value: editClient.newPassword || "", onChange: function(e) { setEditClient(function(c) { return Object.assign({}, c, { newPassword: e.target.value }); }); } })
+        ),
+        React.createElement("div", { style: ss.fmgroup },
+          React.createElement("label", { style: ss.fmlabel }, "Plan"),
+          React.createElement("select", { value: editClient.plan || "Basic", onChange: function(e) { setEditClient(function(c) { return Object.assign({}, c, { plan: e.target.value }); }); }, style: { width: "100%", background: C.bg, border: "1.5px solid " + C.border, borderRadius: 9, padding: "11px 14px", fontFamily: "Inter,sans-serif", fontSize: 13 } },
+            React.createElement("option", { value: "Basic" }, "Basic - $19/mo"),
+            React.createElement("option", { value: "Pro" }, "Pro - $49/mo"),
+            React.createElement("option", { value: "Agency" }, "Agency - $149/mo")
+          )
+        ),
+        React.createElement("div", { style: { display: "flex", gap: 10, marginTop: 20 } },
+          React.createElement("button", { onClick: function() { setShowEditModal(false); }, style: { flex: 1, padding: 11, borderRadius: 9, border: "1.5px solid " + C.border, background: "transparent", color: C.muted, fontFamily: "Inter,sans-serif", fontSize: 13, cursor: "pointer" } }, "Cancel"),
+          React.createElement(Btn, { variant: "primary", onClick: handleEditClient }, "Save Changes")
+        )
+      )
+    ),
+
+    // ADD CLIENT MODAL
+    showAddClient && React.createElement("div", { style: ss.overlay, onClick: function(e) { if (e.target === e.currentTarget) setShowAddClient(false); } },
+      React.createElement("div", { style: ss.modal },
+        React.createElement("div", { style: { fontFamily: "Poppins,sans-serif", fontSize: 18, fontWeight: 700, marginBottom: 20 } }, "Naya Client Add Karo"),
+        React.createElement("div", { style: ss.infobx, marginBottom: 16 }, "Client ka Supabase account banayein. Wo email verify karke login karega."),
+        React.createElement("div", { style: ss.fmgroup }, React.createElement("label", { style: ss.fmlabel }, "Name *"), React.createElement(Input, { placeholder: "Ali Store", value: newClient.name, onChange: function(e) { setNewClient(function(c) { return Object.assign({}, c, { name: e.target.value }); }); } })),
+        React.createElement("div", { style: ss.fmgroup }, React.createElement("label", { style: ss.fmlabel }, "Email *"), React.createElement(Input, { type: "email", placeholder: "client@email.com", value: newClient.email, onChange: function(e) { setNewClient(function(c) { return Object.assign({}, c, { email: e.target.value }); }); } })),
+        React.createElement("div", { style: ss.fmgroup }, React.createElement("label", { style: ss.fmlabel }, "Password *"), React.createElement(Input, { type: "password", placeholder: "Min 6 chars", value: newClient.password, onChange: function(e) { setNewClient(function(c) { return Object.assign({}, c, { password: e.target.value }); }); } })),
+        React.createElement("div", { style: ss.fmgroup }, React.createElement("label", { style: ss.fmlabel }, "Plan"), React.createElement("select", { value: newClient.plan, onChange: function(e) { setNewClient(function(c) { return Object.assign({}, c, { plan: e.target.value }); }); }, style: { width: "100%", background: C.bg, border: "1.5px solid " + C.border, borderRadius: 9, padding: "11px 14px", fontFamily: "Inter,sans-serif", fontSize: 13 } }, React.createElement("option", null, "Basic"), React.createElement("option", null, "Pro"), React.createElement("option", null, "Agency"))),
+        React.createElement("div", { style: { display: "flex", gap: 10, marginTop: 20 } },
+          React.createElement("button", { onClick: function() { setShowAddClient(false); }, style: { flex: 1, padding: 11, borderRadius: 9, border: "1.5px solid " + C.border, background: "transparent", color: C.muted, fontFamily: "Inter,sans-serif", fontSize: 13, cursor: "pointer" } }, "Cancel"),
+          React.createElement(Btn, { variant: "primary", onClick: handleAddClient, disabled: addingClient }, addingClient ? "Ban raha hai..." : "Client Add Karo")
+        )
+      )
+    ),
+
+    // TOAST
+    toast && React.createElement("div", { style: Object.assign({}, ss.toast, { borderLeft: "4px solid " + (toastErr ? C.danger : C.success) }) }, toast)
+  );
+}
+
