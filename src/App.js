@@ -5,6 +5,14 @@ const SUPA_KEY = "sb_publishable_Bz5xRPDQ_ZDE99T_QRSLlg_UKLH-6b6";
 const ADMIN_EMAIL = "adnanbutt3010@gmail.com";
 const ADMIN_USER = "admin";
 const ADMIN_PASS = "Pst@2026";
+// Plan credit limits
+const PLAN_LIMITS = {
+  Basic: 50,
+  Pro: 250,
+  Agency: 1500,
+  AgencyUnlimited: -1,
+};
+
 const COMPANY_INFO = {
   name: "GeoRouteX",
   tagline: "Map Your Digital Success",
@@ -105,69 +113,187 @@ const dbAPI = {
 };
 
 function generateSEO(title, price, seoType, postType) {
-  const tl = title.toLowerCase();
-  const words = title.split(" ");
-  const slug = title.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "");
-  const isLocal = seoType === "local";
-  const isBlog = postType === "blog";
-  const yr = new Date().getFullYear();
+  var tl = title.toLowerCase();
+  var words = title.split(" ");
+  var slug = title.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "");
+  var isLocal = seoType === "local";
+  var isBlog = postType === "blog";
+  var yr = new Date().getFullYear();
+  var city = "Karachi, Lahore, Islamabad, Rawalpindi";
+  var nl = "\n";
 
-  const kw = isLocal
-    ? [tl, "buy " + tl, tl + " price in pakistan", tl + " online pakistan", "cheap " + tl + " pakistan"]
-    : [tl, "buy " + tl + " online", "best " + tl, tl + " for sale", tl + " shop"];
+  var kw = isLocal ? [
+    tl + " price in pakistan",
+    "buy " + tl + " online pakistan",
+    tl + " best price pakistan " + yr,
+    "original " + tl + " pakistan",
+    tl + " cash on delivery",
+    "cheap " + tl + " pakistan",
+    tl + " karachi lahore islamabad",
+    "best quality " + tl + " pk"
+  ] : [
+    "buy " + tl + " online",
+    "best " + tl + " " + yr,
+    tl + " free shipping worldwide",
+    "premium " + tl + " for sale",
+    tl + " best deal online",
+    "top rated " + tl,
+    tl + " shop online",
+    "discount " + tl + " worldwide"
+  ];
 
-  const bkw = [tl + " guide", "best " + tl + " " + yr, tl + " review", "how to buy " + tl, tl + " tips"];
+  var bkw = isLocal ? [
+    tl + " guide pakistan " + yr,
+    "best " + tl + " in pakistan",
+    tl + " review pakistan",
+    "how to buy " + tl + " in pakistan",
+    tl + " tips pakistan"
+  ] : [
+    tl + " complete guide " + yr,
+    "best " + tl + " review",
+    "top " + tl + " worldwide",
+    tl + " buying guide",
+    "how to choose " + tl
+  ];
 
-  const tags = words.map(function(w) { return "#" + w.charAt(0).toUpperCase() + w.slice(1); });
-  if (isLocal) { tags.push("#PakistanShopping"); tags.push("#OnlineShoppingPK"); }
-  else { tags.push("#OnlineShopping"); tags.push("#BestPrice"); }
+  var tags = words.map(function(w) { return "#" + w.charAt(0).toUpperCase() + w.slice(1); });
+  if (isLocal) { tags.push("#PakistanShopping", "#OnlineShoppingPK", "#CashOnDelivery", "#MadeForPakistan"); }
+  else { tags.push("#OnlineShopping", "#BestPrice", "#FreeShipping", "#ShopNow"); }
 
   var seoTitle;
   if (isBlog) {
-    seoTitle = isLocal ? title + " - Mukammal Guide " + yr + " | Pakistan" : title + " - Complete Guide " + yr;
+    seoTitle = isLocal ? "Best " + title + " in Pakistan - Complete Guide " + yr + " | Prices, Reviews & Tips" : title + " - Ultimate Buying Guide " + yr + " | Expert Reviews & Best Deals";
   } else {
-    seoTitle = isLocal ? title + " - Best Price " + price + " in Pakistan | Order Online" : title + " - " + price + " | Best Online Deal";
+    seoTitle = isLocal ? "Buy " + title + " Online in Pakistan | Best Price " + price + " | Fast COD Delivery" : "Premium " + title + " - Best Price " + price + " | " + yr + " | Free Worldwide Shipping";
   }
 
-  var desc;
-  if (isBlog && isLocal) {
-    desc = title + " ke baare mein poori maloomat hasil karein! Pakistan mein " + title + " bohat mashhoor hai aur " + yr + " mein isko khareedne ka sabse acha waqt hai.\n\n" + title + " ke Fayde:\n- Ala mayar aur deerpaa saakht\n- Pakistan mein aasaani se dastiyaab - qeemat " + price + "\n- Fast delivery poore Pakistan mein\n- 100% asli product guarantee\n- Easy returns aur customer support 24/7\n\n" + title + " khareedne se pehle yeh guide zaroor parhen aur sahi faisla karein!";
-  } else if (isBlog) {
-    desc = "Looking for the ultimate guide on " + title + "? In this comprehensive " + yr + " guide, we cover everything about " + title + " from key features to buying tips.\n\nTop Benefits:\n- Premium build quality that lasts for years\n- Excellent value at just " + price + "\n- Available worldwide with fast shipping\n- Trusted by thousands of satisfied customers\n- 30-day money-back guarantee\n\nFinal Verdict: At " + price + ", the " + title + " delivers outstanding value. Order yours today!";
+  var descParts;
+  if (isBlog) {
+    descParts = isLocal ? [
+      "Are you looking for the most comprehensive guide on " + title + " in Pakistan " + yr + "? You have come to the right place!",
+      "",
+      "In this expert buying guide, we cover everything about " + title + " - from key features, price comparisons starting at " + price + ", to honest reviews from real Pakistani users.",
+      "",
+      "What is " + title + "?",
+      title + " is one of the most popular and trusted products in Pakistan right now. With prices starting at " + price + ", it delivers exceptional value for Pakistani consumers.",
+      "",
+      "Key Benefits of " + title + " in Pakistan:",
+      "- Premium quality at the best price of " + price + " available in Pakistan",
+      "- Trusted by thousands of Pakistani customers across " + city,
+      "- Available with Cash on Delivery nationwide",
+      "- Fast delivery within 2-5 business days anywhere in Pakistan",
+      "- Easy 7-day return policy with full refund guarantee",
+      "",
+      "Why " + title + " is the Best Choice in Pakistan " + yr + ":",
+      "After extensive research and comparison, " + title + " consistently ranks as the top choice for Pakistani buyers. At " + price + ", the quality and value are simply unmatched in the local market.",
+      "",
+      "Final Verdict:",
+      "If you want the best " + title + " experience in Pakistan, do not wait. Limited stock available - order now and get fast delivery to your doorstep!"
+    ] : [
+      "Looking for the ultimate guide on " + title + " in " + yr + "? Our experts have tested and reviewed everything so you do not have to!",
+      "",
+      "In this comprehensive guide, we cover everything about " + title + " - from technical specifications and key features to price comparisons and buying recommendations from international experts.",
+      "",
+      "What Makes " + title + " Stand Out?",
+      title + " has earned a stellar reputation worldwide for its exceptional quality, innovative design, and outstanding value at just " + price + ". Customers in over 50 countries trust this product.",
+      "",
+      "Top Features and Benefits:",
+      "- Premium build quality that outperforms competitors in its price range",
+      "- Outstanding performance backed by industry-leading technology",
+      "- Best global price at just " + price + " with free worldwide shipping",
+      "- 30-day money-back guarantee - completely risk-free purchase",
+      "- Trusted by over 10,000 satisfied customers across 6 continents",
+      "- Award-winning customer support available 24/7",
+      "",
+      "Expert Verdict for " + yr + ":",
+      "After rigorous testing, " + title + " at " + price + " is our top recommendation. The quality-to-price ratio is simply unbeatable in the global market today.",
+      "",
+      "Order now to secure the best price before stock runs out!"
+    ];
   } else if (isLocal) {
-    desc = title + " ab Pakistan mein sirf " + price + " mein dastiyaab hai! Karachi, Lahore, Islamabad aur poore Pakistan mein fast delivery.\n\n" + title + " ala mayar materials se banaya gaya hai. Style, durability aur functionality - sab kuch " + price + " mein.\n\nHamari khasiyaat:\n- Fast delivery 2-5 working days\n- Cash on Delivery available\n- 100% asli product guarantee\n- Easy returns policy\n- 24/7 customer support\n\nAb intezaar mat karein - " + title + " sirf " + price + " mein hasil karein!";
+    descParts = [
+      "Introducing the premium " + title + " - now available across Pakistan at the incredible price of just " + price + "! Your search for the best " + tl + " online in Pakistan ends here.",
+      "",
+      "Why Choose Our " + title + "?",
+      "Our " + title + " is manufactured using the highest quality materials, designed to exceed the standards of Pakistani consumers. It combines superior durability, elegant style, and outstanding functionality - all at an incredible price of " + price + ".",
+      "",
+      "Premium Features and Benefits:",
+      "- 100% original product with full quality guarantee and authenticity certificate",
+      "- Premium grade materials built to last through years of daily use",
+      "- Best price in Pakistan at just " + price + " - lowest price guaranteed",
+      "- Fast delivery within 2-5 business days to all cities including " + city,
+      "- Cash on Delivery available nationwide - pay when you receive!",
+      "- Easy 7-day return policy - no questions asked, full refund guaranteed",
+      "- 24/7 dedicated customer support team ready to assist you",
+      "",
+      "What Our Customers Say:",
+      "Thousands of satisfied customers across Pakistan have already made " + title + " their top choice. With consistent 5-star ratings for quality and service, it is the most trusted " + tl + " brand in Pakistan.",
+      "",
+      "Do not miss this exclusive opportunity! At just " + price + ", stocks are limited and selling fast. Order your " + title + " right now and experience premium quality delivered straight to your door within days!"
+    ];
   } else {
-    desc = "Discover the " + title + ", now available worldwide at just " + price + "! Engineered with premium materials for global customers who demand quality.\n\nWhy Choose Us:\n- Free international shipping on qualifying orders\n- 30-day money-back guarantee\n- Secure payment options worldwide\n- World-class customer support 24/7\n- Premium quality at unbeatable " + price + "\n\nOrder your " + title + " today and experience the difference!";
+    descParts = [
+      "Discover the exceptional " + title + " - now available worldwide at the unbeatable price of just " + price + "! Trusted by customers in over 50 countries, this product has earned a stellar reputation for exceeding all expectations.",
+      "",
+      "Why " + title + " Stands Above All Competitors:",
+      "When it comes to " + tl + ", nothing compares to the quality and value of " + title + " at " + price + ". Our product engineers have spent countless hours perfecting every detail to ensure you receive the absolute best.",
+      "",
+      "World-Class Features You Will Love:",
+      "- Premium construction using the finest materials for ultimate durability and longevity",
+      "- Cutting-edge innovative design that seamlessly combines aesthetics with superior functionality",
+      "- Best global price at just " + price + " - the most competitive price-to-quality ratio available",
+      "- Free international shipping to over 50 countries worldwide - delivered to your door",
+      "- 30-day money-back guarantee - a completely risk-free purchase with zero worries",
+      "- Trusted by over 10,000 verified customers across 6 continents with 5-star reviews",
+      "- Award-winning customer support available 24/7 in multiple languages",
+      "- Secure payment processing accepting all major cards, PayPal, and more",
+      "",
+      "Join thousands of smart shoppers worldwide who have discovered why " + title + " at " + price + " is the smartest investment you can make today.",
+      "",
+      "Limited stock available - secure yours now before it sells out and prices increase!"
+    ];
   }
+
+  var desc = descParts.join(nl);
 
   var meta;
   if (isBlog) {
-    meta = isLocal ? title + " ki mukammal guide " + yr + ". Pakistan mein best tips, review aur qeemat. Abhi parhen!" : "Complete guide to " + title + " in " + yr + ". Expert tips, reviews and buying advice.";
+    meta = isLocal ? "Complete " + title + " buying guide " + yr + " for Pakistan. Expert reviews, best prices from " + price + ", comparison and tips. Read before you buy!" : "Ultimate " + title + " guide " + yr + ". Expert reviews, global prices from " + price + ", buying tips. Read the full expert guide now!";
   } else {
-    meta = isLocal ? "Buy " + title + " for " + price + " in Pakistan. Fast delivery. Cash on Delivery. Premium quality!" : "Shop " + title + " for " + price + ". Worldwide shipping. 30-day returns. Best price online!";
+    meta = isLocal ? "Buy original " + title + " in Pakistan for just " + price + ". Fast delivery to " + city + ". Cash on delivery. 7-day returns. 100% authentic. Order now!" : "Shop premium " + title + " worldwide for only " + price + ". Free shipping. 30-day returns. Best quality guaranteed. 10000+ happy customers. Order today!";
   }
 
   var snippet = meta.slice(0, 150);
 
-  var angles = ["Front View", "Side View", "Back View", "Detail Shot", "Lifestyle Photo"];
+  var angles = ["Front View", "Side Profile", "Close Up Detail", "In Use Lifestyle", "Package Contents"];
   var alts = isBlog
-    ? [title + " - Featured Image " + yr, "Best " + title + " Guide", title + " Review", "How to Choose " + title, title + " Tips " + yr]
-    : angles.map(function(a) { return isLocal ? title + " " + a + " - " + price + " Pakistan" : title + " " + a + " - Buy Online " + price; });
+    ? [
+        title + " Complete Review " + yr + " - Expert Guide Featured Image",
+        "Best " + title + " Comparison " + yr + " - Top Picks Ranked",
+        title + " Pros and Cons - Honest Expert Review",
+        "How to Choose the Right " + title + " - Step by Step Guide",
+        title + " vs Competitors " + yr + " - Which One Wins"
+      ]
+    : angles.map(function(a) {
+        return isLocal ? "Buy " + title + " Online Pakistan - " + a + " - " + price + " - Best Price " + yr : "Premium " + title + " - " + a + " - Shop Online " + price + " - Free Shipping " + yr;
+      });
 
   var permalink = isBlog
-    ? (isLocal ? "yoursite.com/blog/" + slug + "-guide-pakistan" : "yoursite.com/blog/" + slug + "-guide-" + yr)
-    : (isLocal ? "yourstore.com/products/" + slug + "-pakistan" : "yourstore.com/products/" + slug);
+    ? (isLocal ? "yoursite.com/blog/best-" + slug + "-guide-pakistan-" + yr : "yoursite.com/blog/ultimate-" + slug + "-guide-" + yr)
+    : (isLocal ? "yourstore.com/products/buy-" + slug + "-pakistan" : "yourstore.com/products/premium-" + slug + "-" + yr);
 
   var ctas = isBlog
-    ? ["Puri Guide Parhen", "Read Full Review", "Learn More"]
-    : (isLocal ? ["Order Now - Only " + price + "!", "Buy Now - Cash on Delivery!", "Abhi Order Karein - " + price] : ["Order Now - Only " + price + "!", "Get Yours Today!", "Shop Now - Free Shipping!"]);
+    ? ["Read Complete Guide Now", "Get Expert Buying Tips Now", "See Full Review and Prices"]
+    : (isLocal
+      ? ["Order Now - Only " + price + " - Fast Delivery!", "Buy Now - Cash on Delivery Available!", "Get Yours Today - Limited Stock at " + price + "!"]
+      : ["Order Now - Only " + price + " - Free Shipping!", "Shop Now - Best Price Guaranteed!", "Buy Today - 30-Day Money Back Guarantee!"]);
 
   return {
     seoTitle: seoTitle,
     description: desc,
     metaDescription: meta,
     snippet: snippet,
-    keywords: isBlog ? bkw : kw,
+    keywords: (isBlog ? bkw : kw).slice(0, 8),
     hashtags: tags.slice(0, 6),
     altTexts: alts,
     permalink: permalink,
@@ -176,6 +302,7 @@ function generateSEO(title, price, seoType, postType) {
     postType: postType,
   };
 }
+
 
 var C = {
   primary: "#6366f1", primaryDark: "#4f46e5", primaryLight: "#eef2ff",
@@ -250,6 +377,7 @@ export default function App() {
   var [newInvoice, setNewInvoice] = useState({ customer: { name: "", phone: "", company: "", whatsapp: "" }, services: [{ name: "PostRank AI", qty: 1, price: 25000 }], dueDate: "", notes: "", status: "pending" });
   var [toast, setToast] = useState(null);
   var [toastErr, setToastErr] = useState(false);
+  var [credits, setCredits] = useState(null);
 
   var isAdmin = profile && (profile.email === ADMIN_EMAIL || profile.role === "admin");
 
@@ -289,12 +417,23 @@ export default function App() {
       var user = d.user || {};
       var meta = user.user_metadata || {};
       var sess = { token: d.access_token, user: user };
+      // Check clients table for plan
       var prof = {
         email: user.email || loginEmail,
         name: meta.name || loginEmail.split("@")[0],
         role: meta.role || "client",
         plan: meta.plan || "Basic"
       };
+      // Load plan from clients table
+      fetch(SUPA_URL + "/rest/v1/clients?email=eq." + encodeURIComponent(user.email || loginEmail), {
+        headers: { apikey: SUPA_KEY, Authorization: "Bearer " + SUPA_KEY }
+      }).then(function(r) { return r.json(); }).then(function(data) {
+        if (data && data[0] && data[0].plan) {
+          prof.plan = data[0].plan;
+          setProfile(Object.assign({}, prof, { plan: data[0].plan }));
+          localStorage.setItem("pr_prof", JSON.stringify(Object.assign({}, prof, { plan: data[0].plan })));
+        }
+      }).catch(function(){});
       setSession(sess); setProfile(prof);
       localStorage.setItem("pr_sess", JSON.stringify(sess));
       localStorage.setItem("pr_prof", JSON.stringify(prof));
@@ -353,6 +492,70 @@ export default function App() {
     if (session && isAdmin && view === "invoices") loadInvoices();
   }, [view, session]);
 
+  function loadCredits() {
+    if (!session || !session.user) return;
+    var userId = session.user.id;
+    dbAPI.select("credits", "user_id=eq." + userId, SUPA_KEY).then(function(data) {
+      if (data && data[0]) {
+        setCredits(data[0]);
+      } else {
+        // Initialize credits based on plan
+        var plan = profile ? profile.plan : "Basic";
+        var limit = PLAN_LIMITS[plan] || 50;
+        var rec = {
+          user_id: userId,
+          plan: plan,
+          total_credits: limit,
+          used_credits: 0,
+          is_unlimited: plan === "AgencyUnlimited",
+          reset_date: new Date(new Date().getFullYear(), new Date().getMonth() + 1, 1).toISOString().split("T")[0],
+          created_at: new Date().toISOString(),
+        };
+        dbAPI.insert("credits", rec, SUPA_KEY).then(function(d) {
+          setCredits(d[0] || rec);
+        }).catch(function() { setCredits(rec); });
+      }
+    }).catch(function() {
+      var plan = profile ? profile.plan : "Basic";
+      setCredits({ total_credits: PLAN_LIMITS[plan] || 50, used_credits: posts.length, is_unlimited: false, plan: plan });
+    });
+  }
+
+  useEffect(function() {
+    if (session && !isAdmin) loadCredits();
+  }, [session, profile]);
+
+  function getRemainingCredits() {
+    if (!credits) {
+      var plan = profile ? profile.plan : "Basic";
+      var limit = PLAN_LIMITS[plan] || 50;
+      return limit - posts.length;
+    }
+    if (credits.is_unlimited) return 999999;
+    return Math.max(0, credits.total_credits - credits.used_credits);
+  }
+
+  function getTotalCredits() {
+    if (!credits) { return PLAN_LIMITS[profile ? profile.plan : "Basic"] || 50; }
+    if (credits.is_unlimited) return -1;
+    return credits.total_credits;
+  }
+
+  function useCredit() {
+    if (isAdmin) return true;
+    var remaining = getRemainingCredits();
+    if (remaining <= 0 && !credits.is_unlimited) return false;
+    if (credits && !credits.is_unlimited) {
+      var newUsed = (credits.used_credits || 0) + 1;
+      var updated = Object.assign({}, credits, { used_credits: newUsed });
+      setCredits(updated);
+      if (session && session.user) {
+        dbAPI.update("credits", "user_id=eq." + session.user.id, { used_credits: newUsed }, SUPA_KEY).catch(function(){});
+      }
+    }
+    return true;
+  }
+
   function loadClients() {
     if (!session || !isAdmin) return;
     setClientsLoading(true);
@@ -369,6 +572,18 @@ export default function App() {
 
   function handleGenerate() {
     if (!productTitle.trim() || !productPrice.trim()) { setGenError("Title aur price zaroor bharen."); return; }
+    // Check credits
+    if (!isAdmin) {
+      var remaining = getRemainingCredits();
+      if (remaining <= 0) {
+        setGenError("Credits khatam ho gaye! Plan upgrade karein ya admin se contact karein.");
+        return;
+      }
+      if (!useCredit()) {
+        setGenError("Credits khatam ho gaye! Plan upgrade karein.");
+        return;
+      }
+    }
     setGenError(""); setGenerating(true); setGenerated(null); setSaved(false); setPublished(false); setUploadedImages([]); setImageAlts([]);
     setTimeout(function() {
       try {
@@ -885,14 +1100,38 @@ export default function App() {
         })
       ),
       React.createElement("div", { style: ss.sidebottom },
-        !isAdmin ? React.createElement("div", { style: { background: "#273549", borderRadius: 8, padding: "10px 12px", marginBottom: 10 } },
-          React.createElement("div", { style: { display: "flex", justifyContent: "space-between", fontSize: 10, color: "#64748b", marginBottom: 5 } },
-            React.createElement("span", null, "Posts Used"),
-            React.createElement("span", { style: { color: "#a5b4fc" } }, posts.length + "/" + planLimit)
+        !isAdmin ? React.createElement("div", { style: { background: "#273549", borderRadius: 10, padding: "12px 14px", marginBottom: 10 } },
+          // Plan badge
+          React.createElement("div", { style: { display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 } },
+            React.createElement("span", { style: { fontSize: 10, color: "#64748b", textTransform: "uppercase", letterSpacing: 1 } }, "Monthly Credits"),
+            React.createElement("span", { style: { background: C.primary, color: "white", fontSize: 9, fontWeight: 700, padding: "2px 8px", borderRadius: 10 } }, profile ? profile.plan : "Basic")
           ),
-          React.createElement("div", { style: { background: "#1e293b", borderRadius: 4, height: 5, overflow: "hidden" } },
-            React.createElement("div", { style: { width: usagePct + "%", height: "100%", background: usagePct > 80 ? C.danger : C.primary, borderRadius: 4 } })
-          )
+          // Credits display
+          credits && credits.is_unlimited
+            ? React.createElement("div", { style: { textAlign: "center", padding: "6px 0" } },
+                React.createElement("div", { style: { fontFamily: "Poppins,sans-serif", fontSize: 18, fontWeight: 700, color: "#a5b4fc" } }, "UNLIMITED"),
+                React.createElement("div", { style: { fontSize: 10, color: "#64748b", marginTop: 2 } }, "Agency Unlimited Plan")
+              )
+            : React.createElement("div", null,
+                React.createElement("div", { style: { display: "flex", justifyContent: "space-between", marginBottom: 5 } },
+                  React.createElement("span", { style: { fontSize: 11, color: "#94a3b8" } }, "Remaining"),
+                  React.createElement("span", { style: { fontFamily: "Poppins,sans-serif", fontSize: 14, fontWeight: 700, color: getRemainingCredits() <= 5 ? C.danger : "#a5b4fc" } },
+                    getRemainingCredits() + "/" + getTotalCredits()
+                  )
+                ),
+                React.createElement("div", { style: { background: "#1e293b", borderRadius: 4, height: 6, overflow: "hidden", marginBottom: 4 } },
+                  React.createElement("div", { style: {
+                    width: getTotalCredits() > 0 ? Math.round((getRemainingCredits() / getTotalCredits()) * 100) + "%" : "0%",
+                    height: "100%",
+                    background: getRemainingCredits() <= 5 ? C.danger : getRemainingCredits() <= getTotalCredits() * 0.2 ? C.warning : C.primary,
+                    borderRadius: 4,
+                    transition: "width 0.5s"
+                  }})
+                ),
+                getRemainingCredits() <= 5
+                  ? React.createElement("div", { style: { fontSize: 10, color: C.danger, fontWeight: 600 } }, "Credits khatam hone wale hain! Upgrade karein.")
+                  : React.createElement("div", { style: { fontSize: 10, color: "#64748b" } }, "Resets monthly")
+              )
         ) : null,
         React.createElement("button", { onClick: handleLogout, style: { width: "100%", background: "#273549", border: "1px solid #334155", borderRadius: 9, padding: 10, color: "#94a3b8", fontFamily: "Inter,sans-serif", fontSize: 12, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 8 } }, "Logout")
       )
@@ -1161,6 +1400,24 @@ export default function App() {
                         style: { border: "none", borderRadius: 6, padding: "5px 10px", fontSize: 11, fontFamily: "Inter,sans-serif", cursor: "pointer", fontWeight: 600, background: "#dbeafe", color: "#2563eb" }
                       }, "Edit"),
                       React.createElement("button", {
+                        onClick: function() {
+                          var newPlan = window.prompt("Plan select karein:\n1. Basic (50 credits)\n2. Pro (250 credits)\n3. Agency (1500 credits)\n4. AgencyUnlimited (Unlimited)\n\nType: Basic, Pro, Agency, or AgencyUnlimited", c.plan || "Basic");
+                          if (newPlan && ["Basic","Pro","Agency","AgencyUnlimited"].indexOf(newPlan) !== -1) {
+                            var limit = PLAN_LIMITS[newPlan] || 50;
+                            var isUnlim = newPlan === "AgencyUnlimited";
+                            dbAPI.update("clients", "id=eq." + c.id, { plan: newPlan }, SUPA_KEY).catch(function(){});
+                            fetch(SUPA_URL + "/rest/v1/credits?user_id=eq." + (c.user_id || c.id), {
+                              method: "PATCH",
+                              headers: { apikey: SUPA_KEY, Authorization: "Bearer " + SUPA_KEY, "Content-Type": "application/json" },
+                              body: JSON.stringify({ plan: newPlan, total_credits: limit, is_unlimited: isUnlim })
+                            }).catch(function(){});
+                            setClients(function(prev) { return prev.map(function(x) { return x.id === c.id ? Object.assign({}, x, { plan: newPlan }) : x; }); });
+                            notify("Plan update ho gaya: " + newPlan);
+                          }
+                        },
+                        style: { border: "none", borderRadius: 6, padding: "5px 10px", fontSize: 11, fontFamily: "Inter,sans-serif", cursor: "pointer", fontWeight: 600, background: "#fef3c7", color: "#d97706" }
+                      }, "Plan"),
+                      React.createElement("button", {
                         onClick: function() { handleDeleteClient(c.id); },
                         style: { border: "none", borderRadius: 6, padding: "5px 10px", fontSize: 11, fontFamily: "Inter,sans-serif", cursor: "pointer", fontWeight: 600, background: "#fee2e2", color: "#dc2626" }
                       }, "Del")
@@ -1239,165 +1496,4 @@ export default function App() {
         // Invoice Table
         React.createElement("div", { style: ss.tbl },
           React.createElement("div", { style: Object.assign({}, ss.tblhead, { gridTemplateColumns: "1fr 1.5fr 1fr 1fr 1fr 2fr" }) },
-            React.createElement("div", null, "Invoice #"),
-            React.createElement("div", null, "Customer"),
-            React.createElement("div", null, "Amount"),
-            React.createElement("div", null, "Due Date"),
-            React.createElement("div", null, "Status"),
-            React.createElement("div", null, "Actions")
-          ),
-          invoices.map(function(inv) {
-            var total = calcTotal(inv.services);
-            var statusColors = { paid: { bg: "#dcfce7", color: "#16a34a" }, pending: { bg: "#fef9c3", color: "#ca8a04" }, overdue: { bg: "#fee2e2", color: "#dc2626" } };
-            var sc = statusColors[inv.status] || statusColors.pending;
-            return React.createElement("div", { key: inv.id, style: Object.assign({}, ss.tblrow, { gridTemplateColumns: "1fr 1.5fr 1fr 1fr 1fr 2fr" }) },
-              React.createElement("div", { style: { fontWeight: 700, color: C.primary, fontSize: 12 } }, inv.invoiceNo),
-              React.createElement("div", null,
-                React.createElement("div", { style: { fontWeight: 600, fontSize: 13 } }, inv.customer.name),
-                React.createElement("div", { style: { fontSize: 11, color: C.muted } }, inv.customer.company || inv.customer.phone)
-              ),
-              React.createElement("div", { style: { fontWeight: 700, color: C.ink, fontSize: 13 } }, formatPKR(total)),
-              React.createElement("div", { style: { fontSize: 12, color: C.muted } }, inv.dueDate || "-"),
-              React.createElement("div", null,
-                React.createElement("select", {
-                  value: inv.status,
-                  onChange: function(e) { handleStatusChange(inv.id, e.target.value); },
-                  style: { background: sc.bg, color: sc.color, border: "none", borderRadius: 6, padding: "4px 8px", fontSize: 11, fontWeight: 700, cursor: "pointer", outline: "none" }
-                },
-                  React.createElement("option", { value: "paid" }, "Paid"),
-                  React.createElement("option", { value: "pending" }, "Pending"),
-                  React.createElement("option", { value: "overdue" }, "Overdue")
-                )
-              ),
-              React.createElement("div", { style: { display: "flex", gap: 5, flexWrap: "wrap" } },
-                React.createElement("button", { onClick: function() { downloadInvoicePDF(inv); }, style: { border: "none", borderRadius: 6, padding: "5px 10px", fontSize: 11, cursor: "pointer", fontWeight: 600, background: C.primaryLight, color: C.primary } }, "PDF Save"),
-                React.createElement("button", { onClick: function() { printInvoice(inv); }, style: { border: "none", borderRadius: 6, padding: "5px 10px", fontSize: 11, cursor: "pointer", fontWeight: 600, background: "#f3f4f6", color: "#374151" } }, "Print"),
-                React.createElement("button", { onClick: function() { sendWhatsApp(inv, false); }, style: { border: "none", borderRadius: 6, padding: "5px 10px", fontSize: 11, cursor: "pointer", fontWeight: 600, background: "#dcfce7", color: "#16a34a" } }, "WA Send"),
-                inv.status !== "paid" ? React.createElement("button", { onClick: function() { sendWhatsApp(inv, true); }, style: { border: "none", borderRadius: 6, padding: "5px 10px", fontSize: 11, cursor: "pointer", fontWeight: 600, background: "#fef9c3", color: "#ca8a04" } }, "Reminder") : null,
-                React.createElement("button", { onClick: function() { handleDeleteInvoice(inv.id); }, style: { border: "none", borderRadius: 6, padding: "5px 10px", fontSize: 11, cursor: "pointer", fontWeight: 600, background: "#fee2e2", color: "#dc2626" } }, "Del")
-              )
-            );
-          })
-        )
-      ),
-
-      // PLANS
-      view === "plans" && React.createElement("div", null,
-        React.createElement("div", { style: { marginBottom: 28 } },
-          React.createElement("div", { style: { fontFamily: "Poppins,sans-serif", fontSize: 24, fontWeight: 700 } }, "Plans"),
-          React.createElement("div", { style: { fontSize: 12, color: C.muted, marginTop: 5 } }, "Simple monthly billing")
-        ),
-        React.createElement("div", { style: ss.plansgrid },
-          [{ name: "Basic", price: "$19", feats: ["100 posts/month","SEO optimization","1 website","Email support"], featured: false },
-           { name: "Pro", price: "$49", feats: ["500 posts/month","Advanced SEO","5 websites","Priority support","Analytics"], featured: true },
-           { name: "Agency", price: "$149", feats: ["Unlimited posts","Full SEO suite","Unlimited websites","Dedicated support","White-label","API access"], featured: false }
-          ].map(function(p) {
-            return React.createElement("div", { key: p.name, style: Object.assign({}, ss.plancard, p.featured ? { background: "#1e293b", borderColor: C.primary } : {}) },
-              p.featured ? React.createElement("div", { style: { position: "absolute", top: -11, left: "50%", transform: "translateX(-50%)", background: C.primary, color: "white", fontSize: 9, fontWeight: 700, padding: "4px 14px", borderRadius: 20, whiteSpace: "nowrap" } }, "Most Popular") : null,
-              React.createElement("div", { style: { fontFamily: "Poppins,sans-serif", fontSize: 15, fontWeight: 700, marginBottom: 8, color: p.featured ? "#a5b4fc" : C.ink } }, p.name),
-              React.createElement("div", { style: { fontFamily: "Poppins,sans-serif", fontSize: 32, fontWeight: 700, color: p.featured ? "#f1f5f9" : C.ink } }, p.price, React.createElement("span", { style: { fontSize: 12, color: C.muted } }, "/mo")),
-              React.createElement("ul", { style: { margin: "18px 0", listStyle: "none" } },
-                p.feats.map(function(f) { return React.createElement("li", { key: f, style: { fontSize: 12, padding: "5px 0", borderBottom: "1px solid " + (p.featured ? "#334155" : C.border), display: "flex", alignItems: "center", gap: 7, color: p.featured ? "#94a3b8" : C.ink2 } }, React.createElement("span", { style: { color: C.primary } }, "OK"), f); })
-              ),
-              React.createElement("button", { style: { width: "100%", padding: 12, borderRadius: 10, border: "2px solid " + C.primary, background: p.featured ? C.primary : "transparent", color: p.featured ? "white" : C.primary, fontFamily: "Poppins,sans-serif", fontSize: 13, fontWeight: 600, cursor: "pointer" } }, p.name === (profile.plan || "Basic") ? "Current Plan" : "Get Started")
-            );
-          })
-        )
-      )
-    ),
-
-    // NEW INVOICE MODAL
-    showInvoiceModal && React.createElement("div", { style: ss.overlay, onClick: function(e) { if (e.target === e.currentTarget) setShowInvoiceModal(false); } },
-      React.createElement("div", { style: Object.assign({}, ss.modal, { maxWidth: 560, maxHeight: "90vh", overflowY: "auto" }) },
-        React.createElement("div", { style: { fontFamily: "Poppins,sans-serif", fontSize: 18, fontWeight: 700, marginBottom: 20 } }, "Nai Invoice Banayein"),
-
-        React.createElement("div", { style: { fontFamily: "Poppins,sans-serif", fontSize: 13, fontWeight: 600, color: C.primary, marginBottom: 12 } }, "Customer Details"),
-        React.createElement("div", { style: { display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 16 } },
-          React.createElement("div", null, React.createElement("label", { style: ss.fmlabel }, "Customer Name *"), React.createElement(Input, { placeholder: "Ali Khan", value: newInvoice.customer.name, onChange: function(e) { setNewInvoice(function(p) { return Object.assign({}, p, { customer: Object.assign({}, p.customer, { name: e.target.value }) }); }); } })),
-          React.createElement("div", null, React.createElement("label", { style: ss.fmlabel }, "Phone"), React.createElement(Input, { placeholder: "+92-300-0000000", value: newInvoice.customer.phone, onChange: function(e) { setNewInvoice(function(p) { return Object.assign({}, p, { customer: Object.assign({}, p.customer, { phone: e.target.value }) }); }); } })),
-          React.createElement("div", null, React.createElement("label", { style: ss.fmlabel }, "Company"), React.createElement(Input, { placeholder: "Company Name", value: newInvoice.customer.company, onChange: function(e) { setNewInvoice(function(p) { return Object.assign({}, p, { customer: Object.assign({}, p.customer, { company: e.target.value }) }); }); } })),
-          React.createElement("div", null, React.createElement("label", { style: ss.fmlabel }, "WhatsApp Number"), React.createElement(Input, { placeholder: "923001234567", value: newInvoice.customer.whatsapp, onChange: function(e) { setNewInvoice(function(p) { return Object.assign({}, p, { customer: Object.assign({}, p.customer, { whatsapp: e.target.value }) }); }); } }))
-        ),
-
-        React.createElement("div", { style: { fontFamily: "Poppins,sans-serif", fontSize: 13, fontWeight: 600, color: C.primary, marginBottom: 12 } }, "Services"),
-        newInvoice.services.map(function(s, i) {
-          return React.createElement("div", { key: i, style: { display: "grid", gridTemplateColumns: "2fr 1fr 1fr auto", gap: 8, marginBottom: 8, alignItems: "center" } },
-            React.createElement(Input, { placeholder: "Service name", value: s.name, onChange: function(e) { var sv = newInvoice.services.slice(); sv[i] = Object.assign({}, sv[i], { name: e.target.value }); setNewInvoice(function(p) { return Object.assign({}, p, { services: sv }); }); } }),
-            React.createElement(Input, { placeholder: "Qty", value: s.qty, onChange: function(e) { var sv = newInvoice.services.slice(); sv[i] = Object.assign({}, sv[i], { qty: parseInt(e.target.value) || 1 }); setNewInvoice(function(p) { return Object.assign({}, p, { services: sv }); }); } }),
-            React.createElement(Input, { placeholder: "Price PKR", value: s.price, onChange: function(e) { var sv = newInvoice.services.slice(); sv[i] = Object.assign({}, sv[i], { price: parseInt(e.target.value) || 0 }); setNewInvoice(function(p) { return Object.assign({}, p, { services: sv }); }); } }),
-            React.createElement("button", { onClick: function() { var sv = newInvoice.services.filter(function(_, j) { return j !== i; }); setNewInvoice(function(p) { return Object.assign({}, p, { services: sv }); }); }, style: { background: "#fee2e2", border: "none", borderRadius: 6, padding: "8px 10px", color: "#dc2626", cursor: "pointer", fontWeight: 700 } }, "X")
-          );
-        }),
-        React.createElement("button", { onClick: function() { setNewInvoice(function(p) { return Object.assign({}, p, { services: p.services.concat([{ name: "", qty: 1, price: 0 }]) }); }); }, style: { background: C.primaryLight, border: "none", borderRadius: 8, padding: "8px 16px", color: C.primary, cursor: "pointer", fontSize: 12, fontWeight: 600, marginBottom: 16 } }, "+ Service Add Karo"),
-
-        React.createElement("div", { style: { background: C.bg, border: "1px solid " + C.border, borderRadius: 8, padding: "12px 16px", marginBottom: 16, textAlign: "right" } },
-          React.createElement("div", { style: { fontFamily: "Poppins,sans-serif", fontSize: 18, fontWeight: 700, color: C.primary } },
-            "Total: " + formatPKR(calcTotal(newInvoice.services))
-          )
-        ),
-
-        React.createElement("div", { style: { display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 16 } },
-          React.createElement("div", null, React.createElement("label", { style: ss.fmlabel }, "Due Date"), React.createElement(Input, { type: "date", value: newInvoice.dueDate, onChange: function(e) { setNewInvoice(function(p) { return Object.assign({}, p, { dueDate: e.target.value }); }); } })),
-          React.createElement("div", null, React.createElement("label", { style: ss.fmlabel }, "Status"), React.createElement("select", { value: newInvoice.status, onChange: function(e) { setNewInvoice(function(p) { return Object.assign({}, p, { status: e.target.value }); }); }, style: { width: "100%", background: C.bg, border: "1.5px solid " + C.border, borderRadius: 9, padding: "11px 14px", fontFamily: "Inter,sans-serif", fontSize: 13 } }, React.createElement("option", { value: "pending" }, "Pending"), React.createElement("option", { value: "paid" }, "Paid"), React.createElement("option", { value: "overdue" }, "Overdue")))
-        ),
-
-        React.createElement("div", { style: ss.fmgroup }, React.createElement("label", { style: ss.fmlabel }, "Notes"), React.createElement("textarea", { placeholder: "Additional notes...", value: newInvoice.notes, onChange: function(e) { setNewInvoice(function(p) { return Object.assign({}, p, { notes: e.target.value }); }); }, style: { width: "100%", background: C.bg, border: "1.5px solid " + C.border, borderRadius: 9, padding: "11px 14px", fontFamily: "Inter,sans-serif", fontSize: 13, minHeight: 70, resize: "vertical", outline: "none" } })),
-
-        React.createElement("div", { style: { display: "flex", gap: 10, marginTop: 8 } },
-          React.createElement("button", { onClick: function() { setShowInvoiceModal(false); }, style: { flex: 1, padding: 11, borderRadius: 9, border: "1.5px solid " + C.border, background: "transparent", color: C.muted, fontFamily: "Inter,sans-serif", fontSize: 13, cursor: "pointer" } }, "Cancel"),
-          React.createElement(Btn, { variant: "primary", onClick: handleCreateInvoice }, "Invoice Banayein")
-        )
-      )
-    ),
-
-    // EDIT CLIENT MODAL
-    showEditModal && editClient && React.createElement("div", { style: ss.overlay, onClick: function(e) { if (e.target === e.currentTarget) setShowEditModal(false); } },
-      React.createElement("div", { style: ss.modal },
-        React.createElement("div", { style: { fontFamily: "Poppins,sans-serif", fontSize: 18, fontWeight: 700, marginBottom: 20 } }, "Client Edit Karo"),
-        React.createElement("div", { style: ss.fmgroup },
-          React.createElement("label", { style: ss.fmlabel }, "Client Name"),
-          React.createElement(Input, { value: editClient.name || "", onChange: function(e) { setEditClient(function(c) { return Object.assign({}, c, { name: e.target.value }); }); } })
-        ),
-        React.createElement("div", { style: ss.fmgroup },
-          React.createElement("label", { style: ss.fmlabel }, "Email"),
-          React.createElement(Input, { value: editClient.email || "", onChange: function(e) { setEditClient(function(c) { return Object.assign({}, c, { email: e.target.value }); }); } })
-        ),
-        React.createElement("div", { style: ss.fmgroup },
-          React.createElement("label", { style: ss.fmlabel }, "New Password (khali choren agar change nahi karna)"),
-          React.createElement(Input, { type: "password", placeholder: "Naya password (optional)", value: editClient.newPassword || "", onChange: function(e) { setEditClient(function(c) { return Object.assign({}, c, { newPassword: e.target.value }); }); } })
-        ),
-        React.createElement("div", { style: ss.fmgroup },
-          React.createElement("label", { style: ss.fmlabel }, "Plan"),
-          React.createElement("select", { value: editClient.plan || "Basic", onChange: function(e) { setEditClient(function(c) { return Object.assign({}, c, { plan: e.target.value }); }); }, style: { width: "100%", background: C.bg, border: "1.5px solid " + C.border, borderRadius: 9, padding: "11px 14px", fontFamily: "Inter,sans-serif", fontSize: 13 } },
-            React.createElement("option", { value: "Basic" }, "Basic - $19/mo"),
-            React.createElement("option", { value: "Pro" }, "Pro - $49/mo"),
-            React.createElement("option", { value: "Agency" }, "Agency - $149/mo")
-          )
-        ),
-        React.createElement("div", { style: { display: "flex", gap: 10, marginTop: 20 } },
-          React.createElement("button", { onClick: function() { setShowEditModal(false); }, style: { flex: 1, padding: 11, borderRadius: 9, border: "1.5px solid " + C.border, background: "transparent", color: C.muted, fontFamily: "Inter,sans-serif", fontSize: 13, cursor: "pointer" } }, "Cancel"),
-          React.createElement(Btn, { variant: "primary", onClick: handleEditClient }, "Save Changes")
-        )
-      )
-    ),
-
-    // ADD CLIENT MODAL
-    showAddClient && React.createElement("div", { style: ss.overlay, onClick: function(e) { if (e.target === e.currentTarget) setShowAddClient(false); } },
-      React.createElement("div", { style: ss.modal },
-        React.createElement("div", { style: { fontFamily: "Poppins,sans-serif", fontSize: 18, fontWeight: 700, marginBottom: 20 } }, "Naya Client Add Karo"),
-        React.createElement("div", { style: ss.infobx, marginBottom: 16 }, "Client ka Supabase account banayein. Wo email verify karke login karega."),
-        React.createElement("div", { style: ss.fmgroup }, React.createElement("label", { style: ss.fmlabel }, "Name *"), React.createElement(Input, { placeholder: "Ali Store", value: newClient.name, onChange: function(e) { setNewClient(function(c) { return Object.assign({}, c, { name: e.target.value }); }); } })),
-        React.createElement("div", { style: ss.fmgroup }, React.createElement("label", { style: ss.fmlabel }, "Email *"), React.createElement(Input, { type: "email", placeholder: "client@email.com", value: newClient.email, onChange: function(e) { setNewClient(function(c) { return Object.assign({}, c, { email: e.target.value }); }); } })),
-        React.createElement("div", { style: ss.fmgroup }, React.createElement("label", { style: ss.fmlabel }, "Password *"), React.createElement(Input, { type: "password", placeholder: "Min 6 chars", value: newClient.password, onChange: function(e) { setNewClient(function(c) { return Object.assign({}, c, { password: e.target.value }); }); } })),
-        React.createElement("div", { style: ss.fmgroup }, React.createElement("label", { style: ss.fmlabel }, "Plan"), React.createElement("select", { value: newClient.plan, onChange: function(e) { setNewClient(function(c) { return Object.assign({}, c, { plan: e.target.value }); }); }, style: { width: "100%", background: C.bg, border: "1.5px solid " + C.border, borderRadius: 9, padding: "11px 14px", fontFamily: "Inter,sans-serif", fontSize: 13 } }, React.createElement("option", null, "Basic"), React.createElement("option", null, "Pro"), React.createElement("option", null, "Agency"))),
-        React.createElement("div", { style: { display: "flex", gap: 10, marginTop: 20 } },
-          React.createElement("button", { onClick: function() { setShowAddClient(false); }, style: { flex: 1, padding: 11, borderRadius: 9, border: "1.5px solid " + C.border, background: "transparent", color: C.muted, fontFamily: "Inter,sans-serif", fontSize: 13, cursor: "pointer" } }, "Cancel"),
-          React.createElement(Btn, { variant: "primary", onClick: handleAddClient, disabled: addingClient }, addingClient ? "Ban raha hai..." : "Client Add Karo")
-        )
-      )
-    ),
-
-    // TOAST
-    toast && React.createElement("div", { style: Object.assign({}, ss.toast, { borderLeft: "4px solid " + (toastErr ? C.danger : C.success) }) }, toast)
-  );
-}
+            React.createElement("div", null, "Invo
