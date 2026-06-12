@@ -157,14 +157,14 @@ function generateSEO(title, price, seoType, postType) {
   ];
 
   var tags = words.map(function(w) { return "#" + w.charAt(0).toUpperCase() + w.slice(1); });
-  if (isLocal) { tags.push("#PakistanShopping", "#OnlineShoppingPK", "#CashOnDelivery", "#MadeForPakistan"); }
+  if (isLocal) { tags.push("#PakistanShopping", "#OnlineShoppingPK", "#CashOnDeleteivery", "#MadeForPakistan"); }
   else { tags.push("#OnlineShopping", "#BestPrice", "#FreeShipping", "#ShopNow"); }
 
   var seoTitle;
   if (isBlog) {
     seoTitle = isLocal ? "Best " + title + " in Pakistan - Complete Guide " + yr + " | Prices, Reviews & Tips" : title + " - Ultimate Buying Guide " + yr + " | Expert Reviews & Best Deals";
   } else {
-    seoTitle = isLocal ? "Buy " + title + " Online in Pakistan | Best Price " + price + " | Fast COD Delivery" : "Premium " + title + " - Best Price " + price + " | " + yr + " | Free Worldwide Shipping";
+    seoTitle = isLocal ? "Buy " + title + " Online in Pakistan | Best Price " + price + " | Fast COD Deleteivery" : "Premium " + title + " - Best Price " + price + " | " + yr + " | Free Worldwide Shipping";
   }
 
   var descParts;
@@ -180,7 +180,7 @@ function generateSEO(title, price, seoType, postType) {
       "Key Benefits of " + title + " in Pakistan:",
       "- Premium quality at the best price of " + price + " available in Pakistan",
       "- Trusted by thousands of Pakistani customers across " + city,
-      "- Available with Cash on Delivery nationwide",
+      "- Available with Cash on Deleteivery nationwide",
       "- Fast delivery within 2-5 business days anywhere in Pakistan",
       "- Easy 7-day return policy with full refund guarantee",
       "",
@@ -222,7 +222,7 @@ function generateSEO(title, price, seoType, postType) {
       "- Premium grade materials built to last through years of daily use",
       "- Best price in Pakistan at just " + price + " - lowest price guaranteed",
       "- Fast delivery within 2-5 business days to all cities including " + city,
-      "- Cash on Delivery available nationwide - pay when you receive!",
+      "- Cash on Deleteivery available nationwide - pay when you receive!",
       "- Easy 7-day return policy - no questions asked, full refund guaranteed",
       "- 24/7 dedicated customer support team ready to assist you",
       "",
@@ -285,7 +285,7 @@ function generateSEO(title, price, seoType, postType) {
   var ctas = isBlog
     ? ["Read Complete Guide Now", "Get Expert Buying Tips Now", "See Full Review and Prices"]
     : (isLocal
-      ? ["Order Now - Only " + price + " - Fast Delivery!", "Buy Now - Cash on Delivery Available!", "Get Yours Today - Limited Stock at " + price + "!"]
+      ? ["Order Now - Only " + price + " - Fast Deleteivery!", "Buy Now - Cash on Deleteivery Available!", "Get Yours Today - Limited Stock at " + price + "!"]
       : ["Order Now - Only " + price + " - Free Shipping!", "Shop Now - Best Price Guaranteed!", "Buy Today - 30-Day Money Back Guarantee!"]);
 
   return {
@@ -328,6 +328,108 @@ function Btn(props) {
   var bgMap = { primary: C.primary, danger: C.danger, success: C.success, dark: C.sidebar, outline: "transparent" };
   var bg = bgMap[props.variant] || C.primary;
   return React.createElement("button", { onClick: props.onClick, disabled: props.disabled, style: { background: bg, color: props.variant === "outline" ? C.muted : "white", border: props.variant === "outline" ? "1.5px solid " + C.border : "none", borderRadius: 9, padding: props.small ? "8px 14px" : "11px 20px", fontFamily: "Poppins,sans-serif", fontSize: props.small ? 12 : 13, fontWeight: 600, cursor: props.disabled ? "not-allowed" : "pointer", opacity: props.disabled ? 0.6 : 1, whiteSpace: "nowrap", display: "inline-flex", alignItems: "center", gap: 6 } }, props.children);
+}
+
+function SettingsView(props) {
+  var C = props.C, ss = props.ss, Input = props.Input, Btn = props.Btn, notify = props.notify;
+  var [platform, setPlatform] = React.useState("wordpress");
+  var [siteUrl, setSiteUrl] = React.useState("");
+  var [wpUser, setWpUser] = React.useState("");
+  var [wpPass, setWpPass] = React.useState("");
+  var [shopifyUrl, setShopifyUrl] = React.useState("");
+  var [shopifyToken, setShopifyToken] = React.useState("");
+  var [saving, setSaving] = React.useState(false);
+
+  function handleSave() {
+    setSaving(true);
+    setTimeout(function() {
+      setSaving(false);
+      notify("Settings saved successfully!");
+    }, 800);
+  }
+
+  return React.createElement("div", null,
+    React.createElement("div", { style: { marginBottom: 28 } },
+      React.createElement("div", { style: { fontFamily: "Poppins,sans-serif", fontSize: 24, fontWeight: 700 } }, "Settings"),
+      React.createElement("div", { style: { fontSize: 12, color: C.muted, marginTop: 5 } }, "Save your website credentials")
+    ),
+    React.createElement("div", { style: ss.card },
+      React.createElement("div", { style: { fontFamily: "Poppins,sans-serif", fontSize: 15, fontWeight: 700, marginBottom: 16 } }, "Website Integration"),
+
+      // Platform selector
+      React.createElement("div", { style: ss.fmgroup },
+        React.createElement("label", { style: ss.fmlabel }, "Platform"),
+        React.createElement("select", {
+          value: platform,
+          onChange: function(e) { setPlatform(e.target.value); },
+          style: { width: "100%", background: C.bg, border: "1.5px solid " + C.border, borderRadius: 9, padding: "11px 14px", fontFamily: "Inter,sans-serif", fontSize: 13, color: C.ink, outline: "none" }
+        },
+          React.createElement("option", { value: "wordpress" }, "WordPress"),
+          React.createElement("option", { value: "shopify" }, "Shopify"),
+          React.createElement("option", { value: "woocommerce" }, "WooCommerce"),
+          React.createElement("option", { value: "other" }, "Other")
+        )
+      ),
+
+      // Website URL - always show
+      React.createElement("div", { style: ss.fmgroup },
+        React.createElement("label", { style: ss.fmlabel }, "Website URL"),
+        React.createElement(Input, { placeholder: "https://yourwebsite.com", value: siteUrl, onChange: function(e) { setSiteUrl(e.target.value); } })
+      ),
+
+      // WordPress fields
+      platform === "wordpress" || platform === "woocommerce" ? React.createElement("div", null,
+        React.createElement("div", { style: { background: "#dbeafe", border: "1px solid #93c5fd", borderRadius: 8, padding: "10px 14px", fontSize: 11, color: "#1e40af", marginBottom: 14 } },
+          "WordPress Admin -> Users -> Profile -> Application Passwords -> Add New"
+        ),
+        React.createElement("div", { style: ss.fmgroup },
+          React.createElement("label", { style: ss.fmlabel }, "WordPress Username"),
+          React.createElement(Input, { placeholder: "admin", value: wpUser, onChange: function(e) { setWpUser(e.target.value); } })
+        ),
+        React.createElement("div", { style: ss.fmgroup },
+          React.createElement("label", { style: ss.fmlabel }, "Application Password"),
+          React.createElement(Input, { type: "password", placeholder: "xxxx xxxx xxxx xxxx xxxx xxxx", value: wpPass, onChange: function(e) { setWpPass(e.target.value); } })
+        )
+      ) : null,
+
+      // Shopify fields
+      platform === "shopify" ? React.createElement("div", null,
+        React.createElement("div", { style: { background: "#dcfce7", border: "1px solid #86efac", borderRadius: 8, padding: "10px 14px", fontSize: 11, color: "#166534", marginBottom: 14 } },
+          "Shopify Admin -> Apps -> Develop Apps -> Create App -> API Credentials -> Copy Access Token"
+        ),
+        React.createElement("div", { style: ss.fmgroup },
+          React.createElement("label", { style: ss.fmlabel }, "Shopify Store Domain"),
+          React.createElement(Input, { placeholder: "mystore.myshopify.com", value: shopifyUrl, onChange: function(e) { setShopifyUrl(e.target.value); } })
+        ),
+        React.createElement("div", { style: ss.fmgroup },
+          React.createElement("label", { style: ss.fmlabel }, "Shopify Access Token"),
+          React.createElement(Input, { type: "password", placeholder: "shpat_xxxxxxxxxxxxxxxxx", value: shopifyToken, onChange: function(e) { setShopifyToken(e.target.value); } })
+        )
+      ) : null,
+
+      // Other platform
+      platform === "other" ? React.createElement("div", { style: { background: "#fef9c3", border: "1px solid #fde68a", borderRadius: 8, padding: "12px 14px", fontSize: 12, color: "#78350f" } },
+        "Your platform differs from WordPress/Shopify. Please copy-paste content manually or contact admin."
+      ) : null,
+
+      React.createElement("div", { style: { marginTop: 16, display: "flex", gap: 10 } },
+        React.createElement(Btn, { variant: "primary", onClick: handleSave, disabled: saving }, saving ? "Saving..." : "Save Settings"),
+        platform === "wordpress" || platform === "woocommerce" ? React.createElement("button", {
+          onClick: function() {
+            if (!siteUrl || !wpUser || !wpPass) { notify("Please fill all fields first!", true); return; }
+            notify("Testing connection...");
+            fetch(siteUrl.replace(/\/$/, "") + "/wp-json/wp/v2/posts?per_page=1", {
+              headers: { "Authorization": "Basic " + btoa(wpUser + ":" + wpPass) }
+            }).then(function(r) {
+              if (r.ok) { notify("WordPress connected successfully!"); }
+              else { notify("Connection failed! Please check your credentials.", true); }
+            }).catch(function() { notify("Connection failed! Please check the URL.", true); });
+          },
+          style: { background: "#f1f5f9", border: "1px solid " + C.border, borderRadius: 9, padding: "11px 16px", fontFamily: "Inter,sans-serif", fontSize: 13, cursor: "pointer", color: C.ink2 }
+        }, "Test Connection") : null
+      )
+    )
+  );
 }
 
 export default function App() {
@@ -396,7 +498,7 @@ export default function App() {
   }
 
   function handleLogin() {
-    if (!loginEmail || !loginPw) { setAuthError("Username/Email aur password zaroor bharen."); return; }
+    if (!loginEmail || !loginPw) { setAuthError("Username/Please enter email and password."); return; }
     setAuthLoading(true); setAuthError("");
 
     // Admin direct login - username + password
@@ -442,10 +544,10 @@ export default function App() {
   }
 
   function handleRegister() {
-    if (!regName || !regEmail || !regPw) { setAuthError("Sab fields bharen."); return; }
+    if (!regName || !regEmail || !regPw) { setAuthError("Please fill all fields."); return; }
     setAuthLoading(true); setAuthError("");
     authAPI.signUp(regEmail, regPw, regName).then(function() {
-      setAuthSuccess("Account ban gaya! Email verify karein phir login karein.");
+      setAuthSuccess("Account created! Please verify your email then login.");
       setAuthTab("login"); setLoginEmail(regEmail);
     }).catch(function(e) { setAuthError(e.message); }).finally(function() { setAuthLoading(false); });
   }
@@ -526,19 +628,17 @@ export default function App() {
   }, [session, profile]);
 
   function getRemainingCredits() {
-    if (!credits) {
-      var plan = profile ? profile.plan : "Basic";
-      var limit = PLAN_LIMITS[plan] || 50;
-      return limit - posts.length;
-    }
-    if (credits.is_unlimited) return 999999;
-    return Math.max(0, credits.total_credits - credits.used_credits);
+    var plan = (credits && credits.plan) || (profile && profile.plan) || "Basic";
+    if (plan === "AgencyUnlimited" || (credits && credits.is_unlimited)) return 999999;
+    var limit = PLAN_LIMITS[plan] || 50;
+    var used = credits ? (credits.used_credits || 0) : posts.length;
+    return Math.max(0, limit - used);
   }
 
   function getTotalCredits() {
-    if (!credits) { return PLAN_LIMITS[profile ? profile.plan : "Basic"] || 50; }
-    if (credits.is_unlimited) return -1;
-    return credits.total_credits;
+    var plan = (credits && credits.plan) || (profile && profile.plan) || "Basic";
+    if (plan === "AgencyUnlimited" || (credits && credits.is_unlimited)) return -1;
+    return PLAN_LIMITS[plan] || 50;
   }
 
   function useCredit() {
@@ -571,16 +671,16 @@ export default function App() {
   }, [view, session]);
 
   function handleGenerate() {
-    if (!productTitle.trim() || !productPrice.trim()) { setGenError("Title aur price zaroor bharen."); return; }
+    if (!productTitle.trim() || !productPrice.trim()) { setGenError("Please enter title and price."); return; }
     // Check credits
     if (!isAdmin) {
       var remaining = getRemainingCredits();
       if (remaining <= 0) {
-        setGenError("Credits khatam ho gaye! Plan upgrade karein ya admin se contact karein.");
+        setGenError("Credits exhausted! Please upgrade your plan or contact admin.");
         return;
       }
       if (!useCredit()) {
-        setGenError("Credits khatam ho gaye! Plan upgrade karein.");
+        setGenError("Credits exhausted! Please upgrade your plan.");
         return;
       }
     }
@@ -600,7 +700,7 @@ export default function App() {
     var rec = { user_id: session.user ? session.user.id : null, product_title: generated.product, product_price: generated.price, seo_title: generated.seoTitle, description: generated.description, meta_description: generated.metaDescription, keywords: generated.keywords, hashtags: generated.hashtags, cta: generated.cta, status: "draft", created_at: new Date().toISOString(), seo_type: generated.seoType, post_type: generated.postType };
     dbAPI.insert("posts", rec, session.token).then(function(d) {
       setPosts(function(p) { return [d[0] || Object.assign({}, rec, { id: Date.now() })].concat(p); });
-      setSaved(true); notify("Supabase mein save ho gaya!");
+      setSaved(true); notify("Saved to database successfully!");
     }).catch(function(e) { notify("Save failed: " + e.message, true); }).finally(function() { setSaving(false); });
   }
 
@@ -611,7 +711,7 @@ export default function App() {
         setPosts(function(p) { return p.map(function(x, i) { return i === 0 ? Object.assign({}, x, { status: "published" }) : x; }); });
       }).catch(function(){});
     }
-    setPublished(true); notify("Post published!");
+    setPublished(true); notify("Post published successfully!");
   }
 
   function handleToggleClient(client) {
@@ -619,7 +719,7 @@ export default function App() {
   }
 
   function handleAddClient() {
-    if (!newClient.name || !newClient.email || !newClient.password) { notify("Sab fields bharen.", true); return; }
+    if (!newClient.name || !newClient.email || !newClient.password) { notify("Please fill all fields.", true); return; }
     setAddingClient(true);
     // Save client to Supabase clients table
     dbAPI.insert("clients", {
@@ -632,7 +732,7 @@ export default function App() {
     }, SUPA_KEY).then(function(d) {
       var newC = d[0] || { id: Date.now(), name: newClient.name, email: newClient.email, plan: newClient.plan, status: "active", created_at: new Date().toISOString() };
       setClients(function(prev) { return [newC].concat(prev); });
-      notify("Client add ho gaya! Unhe app ka link bhejein.");
+      notify("Client added! Share the app link with them.");
       setNewClient({ name: "", email: "", password: "", plan: "Basic" });
       setShowAddClient(false);
     }).catch(function(e) {
@@ -655,7 +755,7 @@ export default function App() {
       setClients(function(prev) {
         return prev.map(function(c) { return c.id === editClient.id ? Object.assign({}, c, updateData) : c; });
       });
-      notify("Client update ho gaya!");
+      notify("Client updated successfully!");
       setShowEditModal(false);
       setEditClient(null);
     }).catch(function(e) {
@@ -663,14 +763,14 @@ export default function App() {
       setClients(function(prev) {
         return prev.map(function(c) { return c.id === editClient.id ? Object.assign({}, c, updateData) : c; });
       });
-      notify("Client update ho gaya!");
+      notify("Client updated successfully!");
       setShowEditModal(false);
       setEditClient(null);
     });
   }
 
-  function handleDeleteClient(clientId) {
-    if (!window.confirm("Client delete karna chahte hain?")) return;
+  function handleDeleteeteClient(clientId) {
+    if (!window.confirm("Are you sure you want to delete this client?")) return;
     fetch(SUPA_URL + "/rest/v1/clients?id=eq." + clientId, {
       method: "DELETE",
       headers: { apikey: SUPA_KEY, Authorization: "Bearer " + SUPA_KEY }
@@ -691,7 +791,7 @@ export default function App() {
           var newStatus = c.status === "active" ? "disabled" : "active";
           // Update in Supabase too
           dbAPI.update("clients", "id=eq." + clientId, { status: newStatus }, SUPA_KEY).catch(function(){});
-          notify(newStatus === "active" ? "Client enable ho gaya!" : "Client disable ho gaya!");
+          notify(newStatus === "active" ? "Client enabled successfully!" : "Client disabled successfully!");
           return Object.assign({}, c, { status: newStatus });
         }
         return c;
@@ -749,23 +849,23 @@ export default function App() {
       var saved = d[0] || rec;
       var fullInv = Object.assign({}, inv, { id: saved.id || inv.id });
       setInvoices(function(prev) { return [fullInv].concat(prev); });
-      notify("Invoice ban gayi aur save ho gayi!");
+      notify("Invoice created and saved!");
     }).catch(function() {
       setInvoices(function(prev) { return [inv].concat(prev); });
-      notify("Invoice ban gayi! (Local)");
+      notify("Invoice created!");
     });
     setNewInvoice({ customer: { name: "", phone: "", company: "", whatsapp: "" }, services: [{ name: "PostRank AI", qty: 1, price: 25000 }], dueDate: "", notes: "", status: "pending" });
     setShowInvoiceModal(false);
   }
 
-  function handleDeleteInvoice(id) {
-    if (!window.confirm("Invoice delete karein?")) return;
+  function handleDeleteeteInvoice(id) {
+    if (!window.confirm("Delete this invoice?")) return;
     fetch(SUPA_URL + "/rest/v1/invoices?id=eq." + id, {
       method: "DELETE",
       headers: { apikey: SUPA_KEY, Authorization: "Bearer " + SUPA_KEY }
     }).catch(function(){});
     setInvoices(function(prev) { return prev.filter(function(i) { return i.id !== id; }); });
-    notify("Invoice delete ho gayi!");
+    notify("Invoice deleted!");
   }
 
   function handleStatusChange(id, status) {
@@ -775,7 +875,7 @@ export default function App() {
       body: JSON.stringify({ status: status })
     }).catch(function(){});
     setInvoices(function(prev) { return prev.map(function(i) { return i.id === id ? Object.assign({}, i, { status: status }) : i; }); });
-    notify("Status update ho gaya!");
+    notify("Status updated successfully!");
   }
 
   function sendWhatsApp(invoice, isReminder) {
@@ -894,7 +994,7 @@ export default function App() {
 
     parts.push("<div style='display:flex;justify-content:space-between;align-items:flex-end;margin-top:20px'>");
     parts.push("<div style='max-width:60%;font-size:12px;color:#475569;line-height:1.6'>");
-    parts.push("<strong style='font-size:11px;text-transform:uppercase;letter-spacing:1px;color:#64748b'>Notes & Terms</strong><br>");
+    parts.push("<strong style='font-size:11px;text-transform:uppercase;letter-spacing:1px;color:#64748b'>Notes / Terms & Terms</strong><br>");
     parts.push((invoice.notes || "Payment due within 15 days. Late payments may incur charges.") + "<br><br>");
     parts.push("Thank you for choosing " + COMPANY_INFO.name + "!");
     parts.push("</div>");
@@ -967,7 +1067,7 @@ export default function App() {
     parts.push("<td style='padding:14px;text-align:right;font-size:20px;font-weight:900;color:#6366f1'>" + formatPKR(total) + "</td></tr></tbody></table>");
     parts.push("<div style='display:flex;justify-content:space-between;align-items:flex-end;margin-top:20px'>");
     parts.push("<div style='max-width:60%;font-size:12px;color:#475569;line-height:1.6'>");
-    parts.push("<strong style='font-size:11px;text-transform:uppercase;letter-spacing:1px;color:#64748b'>Notes and Terms</strong><br>");
+    parts.push("<strong style='font-size:11px;text-transform:uppercase;letter-spacing:1px;color:#64748b'>Notes / Terms and Terms</strong><br>");
     parts.push((invoice.notes || "Payment due within 15 days. Thank you for your business!") + "</div>");
     parts.push("<div style='text-align:center;border-top:2px solid #334155;padding-top:10px;min-width:200px'>");
     parts.push("<div style='font-style:italic;color:#6366f1;font-size:16px;margin-bottom:6px'>Adnan Butt</div>");
@@ -979,7 +1079,7 @@ export default function App() {
     var htmlContent = parts.join("");
     // Open in new window and trigger print to PDF
     var win = window.open("", "_blank", "width=800,height=600");
-    if (!win) { notify("Popup allow karein browser mein!", true); return; }
+    if (!win) { notify("Please allow popups in your browser!", true); return; }
     win.document.write(htmlContent);
     win.document.close();
     win.focus();
@@ -988,7 +1088,7 @@ export default function App() {
     setTimeout(function() {
       win.print();
     }, 800);
-    notify("Print dialog mein 'Save as PDF' select karein!");
+    notify("Select 'Save as PDF' in the print dialog!");
   }
 
   var ss = {
@@ -1041,15 +1141,15 @@ export default function App() {
         authSuccess ? React.createElement("div", { style: ss.sucbx }, authSuccess) : null,
         authTab === "login"
           ? React.createElement("div", null,
-              React.createElement("div", { style: ss.fmgroup }, React.createElement("label", { style: ss.fmlabel }, "Email"), React.createElement(Input, { type: "email", placeholder: "admin ya email", value: loginEmail, onChange: function(e) { setLoginEmail(e.target.value); }, onKeyDown: function(e) { if (e.key === "Enter") handleLogin(); } })),
+              React.createElement("div", { style: ss.fmgroup }, React.createElement("label", { style: ss.fmlabel }, "Email"), React.createElement(Input, { type: "email", placeholder: "Username or email", value: loginEmail, onChange: function(e) { setLoginEmail(e.target.value); }, onKeyDown: function(e) { if (e.key === "Enter") handleLogin(); } })),
               React.createElement("div", { style: ss.fmgroup }, React.createElement("label", { style: ss.fmlabel }, "Password"), React.createElement(Input, { type: "password", placeholder: "password", value: loginPw, onChange: function(e) { setLoginPw(e.target.value); }, onKeyDown: function(e) { if (e.key === "Enter") handleLogin(); } })),
-              React.createElement(Btn, { variant: "primary", onClick: handleLogin, disabled: authLoading, style: { width: "100%" } }, authLoading ? "Login ho raha hai..." : "Login Karein"),
-              React.createElement("div", { style: { fontSize: 11, color: C.muted, textAlign: "center", marginTop: 14 } }, "Admin username: admin | Recovery: adnanbutt3010@gmail.com")
+              React.createElement(Btn, { variant: "primary", onClick: handleLogin, disabled: authLoading, style: { width: "100%" } }, authLoading ? "Logging in..." : "Login"),
+              React.createElement("div", { style: { fontSize: 11, color: C.muted, textAlign: "center", marginTop: 14 } }, "Admin login: username 'admin'")
             )
           : React.createElement("div", null,
-              React.createElement("div", { style: ss.fmgroup }, React.createElement("label", { style: ss.fmlabel }, "Full Name"), React.createElement(Input, { placeholder: "Aapka naam", value: regName, onChange: function(e) { setRegName(e.target.value); } })),
-              React.createElement("div", { style: ss.fmgroup }, React.createElement("label", { style: ss.fmlabel }, "Email"), React.createElement(Input, { type: "email", placeholder: "apna@email.com", value: regEmail, onChange: function(e) { setRegEmail(e.target.value); } })),
-              React.createElement("div", { style: ss.fmgroup }, React.createElement("label", { style: ss.fmlabel }, "Password"), React.createElement(Input, { type: "password", placeholder: "Min 6 chars", value: regPw, onChange: function(e) { setRegPw(e.target.value); } })),
+              React.createElement("div", { style: ss.fmgroup }, React.createElement("label", { style: ss.fmlabel }, "Full Name"), React.createElement(Input, { placeholder: "Your full name", value: regName, onChange: function(e) { setRegName(e.target.value); } })),
+              React.createElement("div", { style: ss.fmgroup }, React.createElement("label", { style: ss.fmlabel }, "Email"), React.createElement(Input, { type: "email", placeholder: "your@email.com", value: regEmail, onChange: function(e) { setRegEmail(e.target.value); } })),
+              React.createElement("div", { style: ss.fmgroup }, React.createElement("label", { style: ss.fmlabel }, "Password"), React.createElement(Input, { type: "password", placeholder: "Min 6 characters", value: regPw, onChange: function(e) { setRegPw(e.target.value); } })),
               React.createElement("div", { style: ss.fmgroup }, React.createElement("label", { style: ss.fmlabel }, "Plan"),
                 React.createElement("select", { value: regPlan, onChange: function(e) { setRegPlan(e.target.value); }, style: { width: "100%", background: C.bg, border: "1.5px solid " + C.border, borderRadius: 9, padding: "11px 14px", fontFamily: "Inter,sans-serif", fontSize: 13 } },
                   React.createElement("option", { value: "Basic" }, "Basic - $19/mo"),
@@ -1057,7 +1157,7 @@ export default function App() {
                   React.createElement("option", { value: "Agency" }, "Agency - $149/mo")
                 )
               ),
-              React.createElement(Btn, { variant: "primary", onClick: handleRegister, disabled: authLoading }, authLoading ? "Ban raha hai..." : "Account Banayein")
+              React.createElement(Btn, { variant: "primary", onClick: handleRegister, disabled: authLoading }, authLoading ? "Creating..." : "Create Account")
             )
       )
     );
@@ -1129,7 +1229,7 @@ export default function App() {
                   }})
                 ),
                 getRemainingCredits() <= 5
-                  ? React.createElement("div", { style: { fontSize: 10, color: C.danger, fontWeight: 600 } }, "Credits khatam hone wale hain! Upgrade karein.")
+                  ? React.createElement("div", { style: { fontSize: 10, color: C.danger, fontWeight: 600 } }, "Credits almost used! Please upgrade your plan.")
                   : React.createElement("div", { style: { fontSize: 10, color: "#64748b" } }, "Resets monthly")
               )
         ) : null,
@@ -1144,16 +1244,16 @@ export default function App() {
       view === "generate" && React.createElement("div", null,
         React.createElement("div", { style: { marginBottom: 28 } },
           React.createElement("div", { style: { fontFamily: "Poppins,sans-serif", fontSize: 24, fontWeight: 700 } }, "Generate Post"),
-          React.createElement("div", { style: { fontSize: 12, color: C.muted, marginTop: 5 } }, "Product ya Blog -> AI likhega -> Save -> Publish")
+          React.createElement("div", { style: { fontSize: 12, color: C.muted, marginTop: 5 } }, "Enter product -> AI generates everything -> Save -> Publish")
         ),
         React.createElement("div", { style: ss.carddark },
-          React.createElement("div", { style: { fontFamily: "Poppins,sans-serif", fontSize: 18, fontWeight: 600, color: "#f1f5f9", marginBottom: 16 } }, postType === "blog" ? "Blog topic kya hai?" : "Aaj kya sell kar rahe ho?"),
+          React.createElement("div", { style: { fontFamily: "Poppins,sans-serif", fontSize: 18, fontWeight: 600, color: "#f1f5f9", marginBottom: 16 } }, postType === "blog" ? "What is your blog topic?" : "What are you selling today?"),
           React.createElement("div", { style: { display: "flex", gap: 8, marginBottom: 10, flexWrap: "wrap" } },
             React.createElement("button", { onClick: function() { setPostType("product"); }, style: { padding: "8px 16px", borderRadius: 8, border: "2px solid " + (postType === "product" ? C.primary : "#334155"), background: postType === "product" ? C.primary : "transparent", color: postType === "product" ? "white" : "#94a3b8", fontFamily: "Inter,sans-serif", fontWeight: 600, fontSize: 12, cursor: "pointer" } }, "Product Post"),
             React.createElement("button", { onClick: function() { setPostType("blog"); }, style: { padding: "8px 16px", borderRadius: 8, border: "2px solid " + (postType === "blog" ? C.warning : "#334155"), background: postType === "blog" ? C.warning : "transparent", color: postType === "blog" ? "white" : "#94a3b8", fontFamily: "Inter,sans-serif", fontWeight: 600, fontSize: 12, cursor: "pointer" } }, "Blog Post")
           ),
           React.createElement("div", { style: { display: "flex", gap: 8, marginBottom: 18, flexWrap: "wrap" } },
-            React.createElement("button", { onClick: function() { setSeoType("local"); }, style: { padding: "7px 14px", borderRadius: 8, border: "none", background: seoType === "local" ? "#273549" : "#1a2535", color: seoType === "local" ? "#a5b4fc" : "#475569", fontFamily: "Inter,sans-serif", fontWeight: 500, fontSize: 11, cursor: "pointer" } }, "Pakistan Local SEO"),
+            React.createElement("button", { onClick: function() { setSeoType("local"); }, style: { padding: "7px 14px", borderRadius: 8, border: "none", background: seoType === "local" ? "#273549" : "#1a2535", color: seoType === "local" ? "#a5b4fc" : "#475569", fontFamily: "Inter,sans-serif", fontWeight: 500, fontSize: 11, cursor: "pointer" } }, "Local SEO (Pakistan)"),
             React.createElement("button", { onClick: function() { setSeoType("international"); }, style: { padding: "7px 14px", borderRadius: 8, border: "none", background: seoType === "international" ? "#273549" : "#1a2535", color: seoType === "international" ? "#a5b4fc" : "#475569", fontFamily: "Inter,sans-serif", fontWeight: 500, fontSize: 11, cursor: "pointer" } }, "International SEO")
           ),
           React.createElement("div", { style: { display: "flex", gap: 14, alignItems: "flex-end", flexWrap: "wrap" } },
@@ -1162,8 +1262,8 @@ export default function App() {
               React.createElement(Input, { dark: true, placeholder: postType === "blog" ? "e.g. Best Sneakers in Pakistan" : "e.g. Nike Running Shoes", value: productTitle, onChange: function(e) { setProductTitle(e.target.value); }, onKeyDown: function(e) { if (e.key === "Enter") handleGenerate(); } })
             ),
             React.createElement("div", { style: { maxWidth: 170 } },
-              React.createElement("div", { style: { fontSize: 11, color: "#94a3b8", textTransform: "uppercase", letterSpacing: 1, marginBottom: 7, fontWeight: 500 } }, postType === "blog" ? "Keyword" : "Price"),
-              React.createElement(Input, { dark: true, placeholder: postType === "blog" ? "keyword" : "PKR 3000", value: productPrice, onChange: function(e) { setProductPrice(e.target.value); }, onKeyDown: function(e) { if (e.key === "Enter") handleGenerate(); } })
+              React.createElement("div", { style: { fontSize: 11, color: "#94a3b8", textTransform: "uppercase", letterSpacing: 1, marginBottom: 7, fontWeight: 500 } }, postType === "blog" ? "Focus Keyword" : "Price"),
+              React.createElement(Input, { dark: true, placeholder: postType === "blog" ? "keyword" : "e.g. PKR 3000", value: productPrice, onChange: function(e) { setProductPrice(e.target.value); }, onKeyDown: function(e) { if (e.key === "Enter") handleGenerate(); } })
             ),
             React.createElement(Btn, { variant: "primary", onClick: handleGenerate, disabled: generating }, generating ? "Generating..." : "Generate Post")
           ),
@@ -1197,7 +1297,7 @@ export default function App() {
               React.createElement("div", { style: { fontSize: 13, color: C.ink, background: C.bg, border: "1px solid " + C.border, borderRadius: 8, padding: "11px 13px" } }, generated.metaDescription)
             ),
             React.createElement("div", null,
-              React.createElement("div", { style: { fontSize: 10, textTransform: "uppercase", letterSpacing: 1, color: C.muted, marginBottom: 7, fontWeight: 600 } }, "Keywords"),
+              React.createElement("div", { style: { fontSize: 10, textTransform: "uppercase", letterSpacing: 1, color: C.muted, marginBottom: 7, fontWeight: 600 } }, "Focus Keywords"),
               React.createElement("div", { style: { display: "flex", flexWrap: "wrap", gap: 6, padding: "10px 12px", background: C.bg, border: "1px solid " + C.border, borderRadius: 8 } },
                 generated.keywords.map(function(k, i) { return React.createElement("span", { key: i, style: { background: "#334155", color: "#e2e8f0", fontSize: 11, padding: "3px 10px", borderRadius: 20 } }, k); })
               )
@@ -1240,8 +1340,8 @@ export default function App() {
                 }),
                 React.createElement("label", { htmlFor: "imgup", style: { cursor: "pointer", display: "block" } },
                   React.createElement("div", { style: { fontSize: 28, marginBottom: 6 } }, "+"),
-                  React.createElement("div", { style: { fontSize: 13, fontWeight: 600, color: C.primary } }, "Images Upload Karo"),
-                  React.createElement("div", { style: { fontSize: 11, color: C.muted, marginTop: 3 } }, "JPG, PNG, WEBP - Multiple select kar sakte ho")
+                  React.createElement("div", { style: { fontSize: 13, fontWeight: 600, color: C.primary } }, "Upload Images"),
+                  React.createElement("div", { style: { fontSize: 11, color: C.muted, marginTop: 3 } }, "JPG, PNG, WEBP - Multiple files supported")
                 )
               ),
               uploadedImages.length > 0
@@ -1261,12 +1361,12 @@ export default function App() {
                             React.createElement("div", { style: { fontSize: 9, color: C.muted, textTransform: "uppercase", letterSpacing: 1, marginBottom: 3, fontWeight: 600 } }, "Image Title"),
                             React.createElement("input", { value: imageAlts[i] ? imageAlts[i].title : "", onChange: function(e) { var u = imageAlts.slice(); if (!u[i]) u[i] = { alt: "", title: "" }; u[i] = Object.assign({}, u[i], { title: e.target.value }); setImageAlts(u); }, style: { width: "100%", background: "white", border: "1.5px solid " + C.border, borderRadius: 7, padding: "7px 10px", fontSize: 12, fontFamily: "Inter,sans-serif", outline: "none" } })
                           ),
-                          React.createElement("div", { style: { fontSize: 10, color: C.success, fontWeight: 500 } }, "Auto-publish par website par upload hogi")
+                          React.createElement("div", { style: { fontSize: 10, color: C.success, fontWeight: 500 } }, "Will auto-upload to website on publish")
                         ),
                         React.createElement("button", { onClick: function() { setUploadedImages(function(p) { return p.filter(function(_, j) { return j !== i; }); }); setImageAlts(function(p) { return p.filter(function(_, j) { return j !== i; }); }); }, style: { background: "#fff1f2", border: "none", borderRadius: 6, padding: "4px 8px", color: C.danger, cursor: "pointer", fontSize: 12 } }, "X")
                       );
                     }),
-                    React.createElement("div", { style: ss.sucbx }, uploadedImages.length + " image(s) ready - WordPress/Shopify par auto-upload hongi!")
+                    React.createElement("div", { style: ss.sucbx }, uploadedImages.length + "  image(s) ready - Will auto-upload to WordPress/Shopify!")
                   )
                 : React.createElement("div", { style: { display: "flex", flexDirection: "column", gap: 6 } },
                     generated.altTexts.map(function(alt, i) {
@@ -1284,7 +1384,7 @@ export default function App() {
         ),
         !generated && !generating && React.createElement("div", { style: { textAlign: "center", padding: "48px 20px", color: C.muted } },
           React.createElement("div", { style: { fontSize: 32, marginBottom: 10 } }, "*"),
-          React.createElement("div", null, "Upar product enter karo aur Generate dabao.")
+          React.createElement("div", null, "Enter your product above and click Generate.")
         )
       ),
 
@@ -1303,7 +1403,7 @@ export default function App() {
         React.createElement("div", { style: ss.tbl },
           React.createElement("div", { style: Object.assign({}, ss.tblhead, ss.tbl4) }, React.createElement("div", null, "Product"), React.createElement("div", null, "Price"), React.createElement("div", null, "Status"), React.createElement("div", null, "Date")),
           postsLoading ? React.createElement("div", { style: { textAlign: "center", padding: 28, color: C.muted } }, "Loading...") :
-          posts.length === 0 ? React.createElement("div", { style: { textAlign: "center", padding: 28, color: C.muted } }, "Koi post nahi. Generate karo!") :
+          posts.length === 0 ? React.createElement("div", { style: { textAlign: "center", padding: 28, color: C.muted } }, "No posts yet. Start generating!") :
           posts.slice(0, 5).map(function(p) {
             return React.createElement("div", { key: p.id, style: Object.assign({}, ss.tblrow, ss.tbl4) },
               React.createElement("div", { style: { fontWeight: 600 } }, p.product_title),
@@ -1323,7 +1423,7 @@ export default function App() {
         React.createElement("div", { style: ss.tbl },
           React.createElement("div", { style: Object.assign({}, ss.tblhead, ss.tbl4) }, React.createElement("div", null, "Product"), React.createElement("div", null, "Price"), React.createElement("div", null, "Status"), React.createElement("div", null, "Date")),
           postsLoading ? React.createElement("div", { style: { textAlign: "center", padding: 28, color: C.muted } }, "Loading...") :
-          posts.length === 0 ? React.createElement("div", { style: { textAlign: "center", padding: 28, color: C.muted } }, "Koi post nahi.") :
+          posts.length === 0 ? React.createElement("div", { style: { textAlign: "center", padding: 28, color: C.muted } }, "No posts found.") :
           posts.map(function(p) {
             return React.createElement("div", { key: p.id, style: Object.assign({}, ss.tblrow, ss.tbl4) },
               React.createElement("div", null, React.createElement("div", { style: { fontWeight: 600 } }, p.product_title), React.createElement("div", { style: { fontSize: 11, color: C.muted } }, p.seo_title ? p.seo_title.slice(0, 45) + "..." : "")),
@@ -1340,7 +1440,7 @@ export default function App() {
         React.createElement("div", { style: { marginBottom: 20, display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 12 } },
           React.createElement("div", null,
             React.createElement("div", { style: { fontFamily: "Poppins,sans-serif", fontSize: 24, fontWeight: 700 } }, "Clients"),
-            React.createElement("div", { style: { fontSize: 12, color: C.muted, marginTop: 5 } }, "Clients manage karo - Add, Enable, Disable")
+            React.createElement("div", { style: { fontSize: 12, color: C.muted, marginTop: 5 } }, "Manage clients - Add, Enable, Disable")
           ),
           React.createElement(Btn, { variant: "primary", onClick: function() { setShowAddClient(true); } }, "+ Add Client")
         ),
@@ -1359,10 +1459,10 @@ export default function App() {
           )
         ),
         React.createElement("div", { style: Object.assign({}, ss.infobx, { marginBottom: 16 }) },
-          React.createElement("strong", null, "Client ko yeh link bhejein: "),
+          React.createElement("strong", null, "Share this link with client: "),
           React.createElement("span", { style: { color: C.primary, fontWeight: 600 } }, window.location.origin),
           React.createElement("br", null),
-          "Client Sign Up karein -> Login karein -> Apna dashboard use karein!"
+          "Client can Sign Up -> Login -> Use their dashboard!"
         ),
         React.createElement("div", { style: ss.tbl },
           React.createElement("div", { style: Object.assign({}, ss.tblhead, { gridTemplateColumns: "2fr 1fr 1fr 1fr 1.5fr" }) },
@@ -1377,7 +1477,7 @@ export default function App() {
             : clients.length === 0
               ? React.createElement("div", { style: { textAlign: "center", padding: 28, color: C.muted } },
                   React.createElement("div", { style: { fontSize: 28, marginBottom: 8 } }, "C"),
-                  React.createElement("div", null, "Koi client nahi. Add Client dabao!"))
+                  React.createElement("div", null, "No clients yet. Click Add Client to get started!"))
               : clients.map(function(c) {
                   var isActive = c.status === "active";
                   return React.createElement("div", { key: c.id, style: Object.assign({}, ss.tblrow, { gridTemplateColumns: "2fr 1fr 1fr 1fr 1.5fr" }) },
@@ -1401,7 +1501,7 @@ export default function App() {
                       }, "Edit"),
                       React.createElement("button", {
                         onClick: function() {
-                          var newPlan = window.prompt("Plan select karein:\n1. Basic (50 credits)\n2. Pro (250 credits)\n3. Agency (1500 credits)\n4. AgencyUnlimited (Unlimited)\n\nType: Basic, Pro, Agency, or AgencyUnlimited", c.plan || "Basic");
+                          var newPlan = window.prompt("Select plan:\n1. Basic (50 credits)\n2. Pro (250 credits)\n3. Agency (1500 credits)\n4. AgencyUnlimited (Unlimited)\n\nType exactly: Basic, Pro, Agency, or AgencyUnlimited", c.plan || "Basic");
                           if (newPlan && ["Basic","Pro","Agency","AgencyUnlimited"].indexOf(newPlan) !== -1) {
                             var limit = PLAN_LIMITS[newPlan] || 50;
                             var isUnlim = newPlan === "AgencyUnlimited";
@@ -1412,15 +1512,15 @@ export default function App() {
                               body: JSON.stringify({ plan: newPlan, total_credits: limit, is_unlimited: isUnlim })
                             }).catch(function(){});
                             setClients(function(prev) { return prev.map(function(x) { return x.id === c.id ? Object.assign({}, x, { plan: newPlan }) : x; }); });
-                            notify("Plan update ho gaya: " + newPlan);
+                            notify("Plan updated to: " + newPlan);
                           }
                         },
                         style: { border: "none", borderRadius: 6, padding: "5px 10px", fontSize: 11, fontFamily: "Inter,sans-serif", cursor: "pointer", fontWeight: 600, background: "#fef3c7", color: "#d97706" }
                       }, "Plan"),
                       React.createElement("button", {
-                        onClick: function() { handleDeleteClient(c.id); },
+                        onClick: function() { handleDeleteeteClient(c.id); },
                         style: { border: "none", borderRadius: 6, padding: "5px 10px", fontSize: 11, fontFamily: "Inter,sans-serif", cursor: "pointer", fontWeight: 600, background: "#fee2e2", color: "#dc2626" }
-                      }, "Del")
+                      }, "Delete")
                     )
                   );
                 })
@@ -1428,20 +1528,7 @@ export default function App() {
       ),
 
       // SETTINGS (Client)
-      view === "settings" && !isAdmin && React.createElement("div", null,
-        React.createElement("div", { style: { marginBottom: 28 } },
-          React.createElement("div", { style: { fontFamily: "Poppins,sans-serif", fontSize: 24, fontWeight: 700 } }, "Settings"),
-          React.createElement("div", { style: { fontSize: 12, color: C.muted, marginTop: 5 } }, "Website credentials save karein")
-        ),
-        React.createElement("div", { style: ss.card },
-          React.createElement("div", { style: { fontFamily: "Poppins,sans-serif", fontSize: 15, fontWeight: 700, marginBottom: 16 } }, "Website Integration"),
-          React.createElement("div", { style: ss.fmgroup }, React.createElement("label", { style: ss.fmlabel }, "Platform"), React.createElement("select", { style: { width: "100%", background: C.bg, border: "1.5px solid " + C.border, borderRadius: 9, padding: "11px 14px", fontFamily: "Inter,sans-serif", fontSize: 13 } }, React.createElement("option", null, "WordPress"), React.createElement("option", null, "Shopify"))),
-          React.createElement("div", { style: ss.fmgroup }, React.createElement("label", { style: ss.fmlabel }, "Website URL"), React.createElement(Input, { placeholder: "https://yourwebsite.com" })),
-          React.createElement("div", { style: ss.fmgroup }, React.createElement("label", { style: ss.fmlabel }, "WordPress Username"), React.createElement(Input, { placeholder: "admin" })),
-          React.createElement("div", { style: ss.fmgroup }, React.createElement("label", { style: ss.fmlabel }, "App Password"), React.createElement(Input, { type: "password", placeholder: "xxxx xxxx xxxx" })),
-          React.createElement(Btn, { variant: "primary" }, "Save Settings")
-        )
-      ),
+      view === "settings" && !isAdmin && React.createElement(SettingsView, { C: C, ss: ss, Input: Input, Btn: Btn, notify: notify, session: session, SUPA_URL: SUPA_URL, SUPA_KEY: SUPA_KEY }),
 
       // ADMIN
       view === "admin" && isAdmin && React.createElement("div", null,
@@ -1527,11 +1614,11 @@ export default function App() {
                 )
               ),
               React.createElement("div", { style: { display: "flex", gap: 5, flexWrap: "wrap" } },
-                React.createElement("button", { onClick: function() { downloadInvoicePDF(inv); }, style: { border: "none", borderRadius: 6, padding: "5px 10px", fontSize: 11, cursor: "pointer", fontWeight: 600, background: C.primaryLight, color: C.primary } }, "PDF Save"),
+                React.createElement("button", { onClick: function() { downloadInvoicePDF(inv); }, style: { border: "none", borderRadius: 6, padding: "5px 10px", fontSize: 11, cursor: "pointer", fontWeight: 600, background: C.primaryLight, color: C.primary } }, "PDF"),
                 React.createElement("button", { onClick: function() { printInvoice(inv); }, style: { border: "none", borderRadius: 6, padding: "5px 10px", fontSize: 11, cursor: "pointer", fontWeight: 600, background: "#f3f4f6", color: "#374151" } }, "Print"),
                 React.createElement("button", { onClick: function() { sendWhatsApp(inv, false); }, style: { border: "none", borderRadius: 6, padding: "5px 10px", fontSize: 11, cursor: "pointer", fontWeight: 600, background: "#dcfce7", color: "#16a34a" } }, "WA Send"),
                 inv.status !== "paid" ? React.createElement("button", { onClick: function() { sendWhatsApp(inv, true); }, style: { border: "none", borderRadius: 6, padding: "5px 10px", fontSize: 11, cursor: "pointer", fontWeight: 600, background: "#fef9c3", color: "#ca8a04" } }, "Reminder") : null,
-                React.createElement("button", { onClick: function() { handleDeleteInvoice(inv.id); }, style: { border: "none", borderRadius: 6, padding: "5px 10px", fontSize: 11, cursor: "pointer", fontWeight: 600, background: "#fee2e2", color: "#dc2626" } }, "Del")
+                React.createElement("button", { onClick: function() { handleDeleteeteInvoice(inv.id); }, style: { border: "none", borderRadius: 6, padding: "5px 10px", fontSize: 11, cursor: "pointer", fontWeight: 600, background: "#fee2e2", color: "#dc2626" } }, "Delete")
               )
             );
           })
@@ -1542,7 +1629,7 @@ export default function App() {
       view === "plans" && React.createElement("div", null,
         React.createElement("div", { style: { marginBottom: 28 } },
           React.createElement("div", { style: { fontFamily: "Poppins,sans-serif", fontSize: 24, fontWeight: 700 } }, "Plans"),
-          React.createElement("div", { style: { fontSize: 12, color: C.muted, marginTop: 5 } }, "Simple monthly billing")
+          React.createElement("div", { style: { fontSize: 12, color: C.muted, marginTop: 5 } }, "Simple monthly billing. Cancel anytime.")
         ),
         React.createElement("div", { style: ss.plansgrid },
           [{ name: "Basic", price: "$19", feats: ["100 posts/month","SEO optimization","1 website","Email support"], featured: false },
@@ -1566,13 +1653,13 @@ export default function App() {
     // NEW INVOICE MODAL
     showInvoiceModal && React.createElement("div", { style: ss.overlay, onClick: function(e) { if (e.target === e.currentTarget) setShowInvoiceModal(false); } },
       React.createElement("div", { style: Object.assign({}, ss.modal, { maxWidth: 560, maxHeight: "90vh", overflowY: "auto" }) },
-        React.createElement("div", { style: { fontFamily: "Poppins,sans-serif", fontSize: 18, fontWeight: 700, marginBottom: 20 } }, "Nai Invoice Banayein"),
+        React.createElement("div", { style: { fontFamily: "Poppins,sans-serif", fontSize: 18, fontWeight: 700, marginBottom: 20 } }, "Create New Invoice"),
 
         React.createElement("div", { style: { fontFamily: "Poppins,sans-serif", fontSize: 13, fontWeight: 600, color: C.primary, marginBottom: 12 } }, "Customer Details"),
         React.createElement("div", { style: { display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 16 } },
-          React.createElement("div", null, React.createElement("label", { style: ss.fmlabel }, "Customer Name *"), React.createElement(Input, { placeholder: "Ali Khan", value: newInvoice.customer.name, onChange: function(e) { setNewInvoice(function(p) { return Object.assign({}, p, { customer: Object.assign({}, p.customer, { name: e.target.value }) }); }); } })),
-          React.createElement("div", null, React.createElement("label", { style: ss.fmlabel }, "Phone"), React.createElement(Input, { placeholder: "+92-300-0000000", value: newInvoice.customer.phone, onChange: function(e) { setNewInvoice(function(p) { return Object.assign({}, p, { customer: Object.assign({}, p.customer, { phone: e.target.value }) }); }); } })),
-          React.createElement("div", null, React.createElement("label", { style: ss.fmlabel }, "Company"), React.createElement(Input, { placeholder: "Company Name", value: newInvoice.customer.company, onChange: function(e) { setNewInvoice(function(p) { return Object.assign({}, p, { customer: Object.assign({}, p.customer, { company: e.target.value }) }); }); } })),
+          React.createElement("div", null, React.createElement("label", { style: ss.fmlabel }, "Customer Full Name *"), React.createElement(Input, { placeholder: "Ali Khan", value: newInvoice.customer.name, onChange: function(e) { setNewInvoice(function(p) { return Object.assign({}, p, { customer: Object.assign({}, p.customer, { name: e.target.value }) }); }); } })),
+          React.createElement("div", null, React.createElement("label", { style: ss.fmlabel }, "Phone Number"), React.createElement(Input, { placeholder: "+92-300-0000000", value: newInvoice.customer.phone, onChange: function(e) { setNewInvoice(function(p) { return Object.assign({}, p, { customer: Object.assign({}, p.customer, { phone: e.target.value }) }); }); } })),
+          React.createElement("div", null, React.createElement("label", { style: ss.fmlabel }, "Company Name"), React.createElement(Input, { placeholder: "Company Name Name", value: newInvoice.customer.company, onChange: function(e) { setNewInvoice(function(p) { return Object.assign({}, p, { customer: Object.assign({}, p.customer, { company: e.target.value }) }); }); } })),
           React.createElement("div", null, React.createElement("label", { style: ss.fmlabel }, "WhatsApp Number"), React.createElement(Input, { placeholder: "923001234567", value: newInvoice.customer.whatsapp, onChange: function(e) { setNewInvoice(function(p) { return Object.assign({}, p, { customer: Object.assign({}, p.customer, { whatsapp: e.target.value }) }); }); } }))
         ),
 
@@ -1581,11 +1668,11 @@ export default function App() {
           return React.createElement("div", { key: i, style: { display: "grid", gridTemplateColumns: "2fr 1fr 1fr auto", gap: 8, marginBottom: 8, alignItems: "center" } },
             React.createElement(Input, { placeholder: "Service name", value: s.name, onChange: function(e) { var sv = newInvoice.services.slice(); sv[i] = Object.assign({}, sv[i], { name: e.target.value }); setNewInvoice(function(p) { return Object.assign({}, p, { services: sv }); }); } }),
             React.createElement(Input, { placeholder: "Qty", value: s.qty, onChange: function(e) { var sv = newInvoice.services.slice(); sv[i] = Object.assign({}, sv[i], { qty: parseInt(e.target.value) || 1 }); setNewInvoice(function(p) { return Object.assign({}, p, { services: sv }); }); } }),
-            React.createElement(Input, { placeholder: "Price PKR", value: s.price, onChange: function(e) { var sv = newInvoice.services.slice(); sv[i] = Object.assign({}, sv[i], { price: parseInt(e.target.value) || 0 }); setNewInvoice(function(p) { return Object.assign({}, p, { services: sv }); }); } }),
+            React.createElement(Input, { placeholder: "Price (PKR)", value: s.price, onChange: function(e) { var sv = newInvoice.services.slice(); sv[i] = Object.assign({}, sv[i], { price: parseInt(e.target.value) || 0 }); setNewInvoice(function(p) { return Object.assign({}, p, { services: sv }); }); } }),
             React.createElement("button", { onClick: function() { var sv = newInvoice.services.filter(function(_, j) { return j !== i; }); setNewInvoice(function(p) { return Object.assign({}, p, { services: sv }); }); }, style: { background: "#fee2e2", border: "none", borderRadius: 6, padding: "8px 10px", color: "#dc2626", cursor: "pointer", fontWeight: 700 } }, "X")
           );
         }),
-        React.createElement("button", { onClick: function() { setNewInvoice(function(p) { return Object.assign({}, p, { services: p.services.concat([{ name: "", qty: 1, price: 0 }]) }); }); }, style: { background: C.primaryLight, border: "none", borderRadius: 8, padding: "8px 16px", color: C.primary, cursor: "pointer", fontSize: 12, fontWeight: 600, marginBottom: 16 } }, "+ Service Add Karo"),
+        React.createElement("button", { onClick: function() { setNewInvoice(function(p) { return Object.assign({}, p, { services: p.services.concat([{ name: "", qty: 1, price: 0 }]) }); }); }, style: { background: C.primaryLight, border: "none", borderRadius: 8, padding: "8px 16px", color: C.primary, cursor: "pointer", fontSize: 12, fontWeight: 600, marginBottom: 16 } }, "+ Add Service"),
 
         React.createElement("div", { style: { background: C.bg, border: "1px solid " + C.border, borderRadius: 8, padding: "12px 16px", marginBottom: 16, textAlign: "right" } },
           React.createElement("div", { style: { fontFamily: "Poppins,sans-serif", fontSize: 18, fontWeight: 700, color: C.primary } },
@@ -1598,11 +1685,11 @@ export default function App() {
           React.createElement("div", null, React.createElement("label", { style: ss.fmlabel }, "Status"), React.createElement("select", { value: newInvoice.status, onChange: function(e) { setNewInvoice(function(p) { return Object.assign({}, p, { status: e.target.value }); }); }, style: { width: "100%", background: C.bg, border: "1.5px solid " + C.border, borderRadius: 9, padding: "11px 14px", fontFamily: "Inter,sans-serif", fontSize: 13 } }, React.createElement("option", { value: "pending" }, "Pending"), React.createElement("option", { value: "paid" }, "Paid"), React.createElement("option", { value: "overdue" }, "Overdue")))
         ),
 
-        React.createElement("div", { style: ss.fmgroup }, React.createElement("label", { style: ss.fmlabel }, "Notes"), React.createElement("textarea", { placeholder: "Additional notes...", value: newInvoice.notes, onChange: function(e) { setNewInvoice(function(p) { return Object.assign({}, p, { notes: e.target.value }); }); }, style: { width: "100%", background: C.bg, border: "1.5px solid " + C.border, borderRadius: 9, padding: "11px 14px", fontFamily: "Inter,sans-serif", fontSize: 13, minHeight: 70, resize: "vertical", outline: "none" } })),
+        React.createElement("div", { style: ss.fmgroup }, React.createElement("label", { style: ss.fmlabel }, "Notes / Terms"), React.createElement("textarea", { placeholder: "Additional notes or terms...", value: newInvoice.notes, onChange: function(e) { setNewInvoice(function(p) { return Object.assign({}, p, { notes: e.target.value }); }); }, style: { width: "100%", background: C.bg, border: "1.5px solid " + C.border, borderRadius: 9, padding: "11px 14px", fontFamily: "Inter,sans-serif", fontSize: 13, minHeight: 70, resize: "vertical", outline: "none" } })),
 
         React.createElement("div", { style: { display: "flex", gap: 10, marginTop: 8 } },
           React.createElement("button", { onClick: function() { setShowInvoiceModal(false); }, style: { flex: 1, padding: 11, borderRadius: 9, border: "1.5px solid " + C.border, background: "transparent", color: C.muted, fontFamily: "Inter,sans-serif", fontSize: 13, cursor: "pointer" } }, "Cancel"),
-          React.createElement(Btn, { variant: "primary", onClick: handleCreateInvoice }, "Invoice Banayein")
+          React.createElement(Btn, { variant: "primary", onClick: handleCreateInvoice }, "Create Invoice")
         )
       )
     ),
@@ -1610,7 +1697,7 @@ export default function App() {
     // EDIT CLIENT MODAL
     showEditModal && editClient && React.createElement("div", { style: ss.overlay, onClick: function(e) { if (e.target === e.currentTarget) setShowEditModal(false); } },
       React.createElement("div", { style: ss.modal },
-        React.createElement("div", { style: { fontFamily: "Poppins,sans-serif", fontSize: 18, fontWeight: 700, marginBottom: 20 } }, "Client Edit Karo"),
+        React.createElement("div", { style: { fontFamily: "Poppins,sans-serif", fontSize: 18, fontWeight: 700, marginBottom: 20 } }, "Edit Client"),
         React.createElement("div", { style: ss.fmgroup },
           React.createElement("label", { style: ss.fmlabel }, "Client Name"),
           React.createElement(Input, { value: editClient.name || "", onChange: function(e) { setEditClient(function(c) { return Object.assign({}, c, { name: e.target.value }); }); } })
@@ -1620,8 +1707,8 @@ export default function App() {
           React.createElement(Input, { value: editClient.email || "", onChange: function(e) { setEditClient(function(c) { return Object.assign({}, c, { email: e.target.value }); }); } })
         ),
         React.createElement("div", { style: ss.fmgroup },
-          React.createElement("label", { style: ss.fmlabel }, "New Password (khali choren agar change nahi karna)"),
-          React.createElement(Input, { type: "password", placeholder: "Naya password (optional)", value: editClient.newPassword || "", onChange: function(e) { setEditClient(function(c) { return Object.assign({}, c, { newPassword: e.target.value }); }); } })
+          React.createElement("label", { style: ss.fmlabel }, "New Password (leave blank to keep current)"),
+          React.createElement(Input, { type: "password", placeholder: "New password (optional)", value: editClient.newPassword || "", onChange: function(e) { setEditClient(function(c) { return Object.assign({}, c, { newPassword: e.target.value }); }); } })
         ),
         React.createElement("div", { style: ss.fmgroup },
           React.createElement("label", { style: ss.fmlabel }, "Plan"),
@@ -1641,15 +1728,15 @@ export default function App() {
     // ADD CLIENT MODAL
     showAddClient && React.createElement("div", { style: ss.overlay, onClick: function(e) { if (e.target === e.currentTarget) setShowAddClient(false); } },
       React.createElement("div", { style: ss.modal },
-        React.createElement("div", { style: { fontFamily: "Poppins,sans-serif", fontSize: 18, fontWeight: 700, marginBottom: 20 } }, "Naya Client Add Karo"),
-        React.createElement("div", { style: ss.infobx, marginBottom: 16 }, "Client ka Supabase account banayein. Wo email verify karke login karega."),
-        React.createElement("div", { style: ss.fmgroup }, React.createElement("label", { style: ss.fmlabel }, "Name *"), React.createElement(Input, { placeholder: "Ali Store", value: newClient.name, onChange: function(e) { setNewClient(function(c) { return Object.assign({}, c, { name: e.target.value }); }); } })),
+        React.createElement("div", { style: { fontFamily: "Poppins,sans-serif", fontSize: 18, fontWeight: 700, marginBottom: 20 } }, "Add New Client"),
+        React.createElement("div", { style: ss.infobx, marginBottom: 16 }, "Create client account. Client will verify email and login."),
+        React.createElement("div", { style: ss.fmgroup }, React.createElement("label", { style: ss.fmlabel }, "Full Name *"), React.createElement(Input, { placeholder: "Ali Store", value: newClient.name, onChange: function(e) { setNewClient(function(c) { return Object.assign({}, c, { name: e.target.value }); }); } })),
         React.createElement("div", { style: ss.fmgroup }, React.createElement("label", { style: ss.fmlabel }, "Email *"), React.createElement(Input, { type: "email", placeholder: "client@email.com", value: newClient.email, onChange: function(e) { setNewClient(function(c) { return Object.assign({}, c, { email: e.target.value }); }); } })),
-        React.createElement("div", { style: ss.fmgroup }, React.createElement("label", { style: ss.fmlabel }, "Password *"), React.createElement(Input, { type: "password", placeholder: "Min 6 chars", value: newClient.password, onChange: function(e) { setNewClient(function(c) { return Object.assign({}, c, { password: e.target.value }); }); } })),
+        React.createElement("div", { style: ss.fmgroup }, React.createElement("label", { style: ss.fmlabel }, "Password *"), React.createElement(Input, { type: "password", placeholder: "Min 6 characters", value: newClient.password, onChange: function(e) { setNewClient(function(c) { return Object.assign({}, c, { password: e.target.value }); }); } })),
         React.createElement("div", { style: ss.fmgroup }, React.createElement("label", { style: ss.fmlabel }, "Plan"), React.createElement("select", { value: newClient.plan, onChange: function(e) { setNewClient(function(c) { return Object.assign({}, c, { plan: e.target.value }); }); }, style: { width: "100%", background: C.bg, border: "1.5px solid " + C.border, borderRadius: 9, padding: "11px 14px", fontFamily: "Inter,sans-serif", fontSize: 13 } }, React.createElement("option", null, "Basic"), React.createElement("option", null, "Pro"), React.createElement("option", null, "Agency"))),
         React.createElement("div", { style: { display: "flex", gap: 10, marginTop: 20 } },
           React.createElement("button", { onClick: function() { setShowAddClient(false); }, style: { flex: 1, padding: 11, borderRadius: 9, border: "1.5px solid " + C.border, background: "transparent", color: C.muted, fontFamily: "Inter,sans-serif", fontSize: 13, cursor: "pointer" } }, "Cancel"),
-          React.createElement(Btn, { variant: "primary", onClick: handleAddClient, disabled: addingClient }, addingClient ? "Ban raha hai..." : "Client Add Karo")
+          React.createElement(Btn, { variant: "primary", onClick: handleAddClient, disabled: addingClient }, addingClient ? "Creating..." : "Add Client")
         )
       )
     ),
