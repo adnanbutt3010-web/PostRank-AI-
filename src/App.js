@@ -480,6 +480,7 @@ export default function App() {
   var [toast, setToast] = useState(null);
   var [toastErr, setToastErr] = useState(false);
   var [credits, setCredits] = useState(null);
+  var [letterhead, setLetterhead] = useState(null);
 
   var isAdmin = profile && (profile.email === ADMIN_EMAIL || profile.role === "admin");
 
@@ -487,8 +488,10 @@ export default function App() {
     try {
       var s = localStorage.getItem("pr_sess");
       var p = localStorage.getItem("pr_prof");
+      var lh = localStorage.getItem("pr_letterhead");
       if (s) setSession(JSON.parse(s));
       if (p) setProfile(JSON.parse(p));
+      if (lh) setLetterhead(lh);
     } catch(e) {}
   }, []);
 
@@ -917,102 +920,7 @@ export default function App() {
     window.open("https://wa.me/" + wa + "?text=" + msg, "_blank");
   }
 
-  function printInvoice(invoice) {
-    var total = calcTotal(invoice.services);
-    var doc = window.open("", "_blank");
-    if (!doc) { notify("Popup blocked karein!", true); return; }
-    
-    var rows = invoice.services.map(function(s) {
-      return [
-        "<tr>",
-        "<td style='padding:10px;border-bottom:1px solid #eee'>" + s.name + "</td>",
-        "<td style='padding:10px;border-bottom:1px solid #eee;text-align:center'>" + s.qty + "</td>",
-        "<td style='padding:10px;border-bottom:1px solid #eee;text-align:right'>" + formatPKR(s.price) + "</td>",
-        "<td style='padding:10px;border-bottom:1px solid #eee;text-align:right'>" + formatPKR(s.qty * s.price) + "</td>",
-        "</tr>"
-      ].join("");
-    }).join("");
-
-    var sc = invoice.status === "paid" ? "#16a34a" : invoice.status === "overdue" ? "#dc2626" : "#d97706";
-
-    var parts = [];
-    parts.push("<!DOCTYPE html><html><head><title>" + invoice.invoiceNo + "</title>");
-    parts.push("<style>");
-    parts.push("body{font-family:Arial,sans-serif;margin:0;padding:0;color:#1a1a2e}");
-    parts.push(".hdr{background:#1e293b;color:white;padding:30px 40px;display:flex;justify-content:space-between;align-items:center}");
-    parts.push(".co-name{font-size:28px;font-weight:900;color:#60a5fa}");
-    parts.push(".co-tag{font-size:12px;color:#94a3b8;margin-top:4px}");
-    parts.push(".inv-title{font-size:32px;font-weight:900;color:#c8f03c;letter-spacing:2px}");
-    parts.push(".body{padding:40px}");
-    parts.push(".two{display:grid;grid-template-columns:1fr 1fr;gap:30px;margin-bottom:30px}");
-    parts.push(".sec-title{font-size:11px;text-transform:uppercase;letter-spacing:1px;color:#64748b;font-weight:700;margin-bottom:10px}");
-    parts.push(".box{background:#f8fafc;border-radius:10px;padding:16px;border:1px solid #e2e8f0}");
-    parts.push("table{width:100%;border-collapse:collapse;margin-bottom:20px}");
-    parts.push("th{background:#1e293b;color:white;padding:12px;text-align:left;font-size:12px;text-transform:uppercase}");
-    parts.push("td{padding:12px;border-bottom:1px solid #f1f5f9;font-size:13px}");
-    parts.push(".ftr{background:#f8fafc;padding:24px 40px;border-top:3px solid #6366f1;text-align:center;font-size:12px;color:#475569}");
-    parts.push("</style></head><body>");
-
-    parts.push("<div class='hdr'>");
-    parts.push("<div><div class='co-name'>" + COMPANY_INFO.name + "</div>");
-    parts.push("<div class='co-tag'>" + COMPANY_INFO.tagline + "</div>");
-    parts.push("<div style='margin-top:12px;font-size:12px;color:#94a3b8'>");
-    parts.push(COMPANY_INFO.founder + " | " + COMPANY_INFO.title + "<br>");
-    parts.push(COMPANY_INFO.email + "<br>" + COMPANY_INFO.phone + "<br>" + COMPANY_INFO.website);
-    parts.push("</div></div>");
-    parts.push("<div style='text-align:right'>");
-    parts.push("<div class='inv-title'>INVOICE</div>");
-    parts.push("<div style='font-size:14px;color:#94a3b8;margin-top:4px'>" + invoice.invoiceNo + "</div>");
-    parts.push("<div style='margin-top:10px;font-size:12px;color:#94a3b8'>Date: " + invoice.date + "<br>Due: " + (invoice.dueDate || "N/A") + "</div>");
-    parts.push("<div style='margin-top:10px;display:inline-block;padding:6px 16px;border-radius:20px;font-size:13px;font-weight:700;background:" + sc + "30;color:" + sc + ";border:2px solid " + sc + "'>");
-    parts.push(invoice.status.toUpperCase() + "</div>");
-    parts.push("</div></div>");
-
-    parts.push("<div class='body'>");
-    parts.push("<div class='two'>");
-    parts.push("<div><div class='sec-title'>Bill To</div><div class='box'>");
-    parts.push("<div style='font-size:16px;font-weight:700'>" + invoice.customer.name + "</div>");
-    parts.push("<div style='font-size:13px;color:#475569;margin-top:3px'>" + (invoice.customer.company || "") + "</div>");
-    parts.push("<div style='font-size:13px;color:#475569'>" + invoice.customer.phone + "</div>");
-    parts.push("</div></div>");
-    parts.push("<div><div class='sec-title'>Invoice Info</div><div class='box'>");
-    parts.push("<div style='font-size:13px;color:#475569'>Invoice: <strong>" + invoice.invoiceNo + "</strong></div>");
-    parts.push("<div style='font-size:13px;color:#475569'>Date: " + invoice.date + "</div>");
-    parts.push("<div style='font-size:13px;color:#475569'>Due: " + (invoice.dueDate || "N/A") + "</div>");
-    parts.push("</div></div></div>");
-
-    parts.push("<table><thead><tr>");
-    parts.push("<th>Service / Description</th>");
-    parts.push("<th style='text-align:center'>Qty</th>");
-    parts.push("<th style='text-align:right'>Unit Price</th>");
-    parts.push("<th style='text-align:right'>Total</th>");
-    parts.push("</tr></thead><tbody>");
-    parts.push(rows);
-    parts.push("<tr><td colspan='3' style='padding:14px;text-align:right;font-weight:700;font-size:15px'>TOTAL AMOUNT</td>");
-    parts.push("<td style='padding:14px;text-align:right;font-size:20px;font-weight:900;color:#6366f1'>" + formatPKR(total) + "</td></tr>");
-    parts.push("</tbody></table>");
-
-    parts.push("<div style='display:flex;justify-content:space-between;align-items:flex-end;margin-top:20px'>");
-    parts.push("<div style='max-width:60%;font-size:12px;color:#475569;line-height:1.6'>");
-    parts.push("<strong style='font-size:11px;text-transform:uppercase;letter-spacing:1px;color:#64748b'>Notes / Terms & Terms</strong><br>");
-    parts.push((invoice.notes || "Payment due within 15 days. Late payments may incur charges.") + "<br><br>");
-    parts.push("Thank you for choosing " + COMPANY_INFO.name + "!");
-    parts.push("</div>");
-    parts.push("<div style='text-align:center;border-top:2px solid #334155;padding-top:10px;min-width:200px'>");
-    parts.push("<div style='font-style:italic;color:#6366f1;font-size:16px;margin-bottom:6px'>Adnan Butt</div>");
-    parts.push("<div style='font-weight:700;font-size:14px'>" + COMPANY_INFO.founder + "</div>");
-    parts.push("<div style='font-size:12px;color:#64748b'>" + COMPANY_INFO.title + " | " + COMPANY_INFO.name + "</div>");
-    parts.push("</div></div></div>");
-
-    parts.push("<div class='ftr'>" + COMPANY_INFO.name + " | " + COMPANY_INFO.email + " | " + COMPANY_INFO.phone + " | " + COMPANY_INFO.website + "</div>");
-    parts.push("</body></html>");
-
-    doc.document.write(parts.join(""));
-    doc.document.close();
-    setTimeout(function() { doc.print(); }, 600);
-  }
-
-  function downloadInvoicePDF(invoice) {
+  function buildInvoiceHTML(invoice, lh) {
     var total = calcTotal(invoice.services);
     var rows = invoice.services.map(function(s) {
       return [
@@ -1024,72 +932,134 @@ export default function App() {
         "</tr>"
       ].join("");
     }).join("");
-
     var sc = invoice.status === "paid" ? "#16a34a" : invoice.status === "overdue" ? "#dc2626" : "#d97706";
+    var hasLetterhead = lh && lh.length > 0;
 
     var parts = [];
     parts.push("<!DOCTYPE html><html><head><meta charset='UTF-8'><title>" + invoice.invoiceNo + "</title>");
     parts.push("<style>");
-    parts.push("body{font-family:Arial,sans-serif;margin:0;padding:0;color:#1a1a2e;-webkit-print-color-adjust:exact;print-color-adjust:exact}");
-    parts.push(".hdr{background:#1e293b;color:white;padding:30px 40px;display:flex;justify-content:space-between;align-items:flex-start}");
-    parts.push(".co-name{font-size:28px;font-weight:900;color:#60a5fa}");
-    parts.push(".co-tag{font-size:12px;color:#94a3b8;margin-top:4px}");
-    parts.push(".inv-title{font-size:32px;font-weight:900;color:#c8f03c;letter-spacing:2px;text-align:right}");
-    parts.push(".body{padding:40px}");
-    parts.push(".two{display:grid;grid-template-columns:1fr 1fr;gap:30px;margin-bottom:30px}");
-    parts.push(".sec-title{font-size:11px;text-transform:uppercase;letter-spacing:1px;color:#64748b;font-weight:700;margin-bottom:10px}");
-    parts.push(".box{background:#f8fafc;border-radius:10px;padding:16px;border:1px solid #e2e8f0}");
-    parts.push("table{width:100%;border-collapse:collapse;margin-bottom:20px}");
-    parts.push("th{background:#1e293b;color:white;padding:12px;text-align:left;font-size:12px;text-transform:uppercase}");
-    parts.push("td{padding:12px;border-bottom:1px solid #f1f5f9;font-size:13px}");
-    parts.push(".ftr{background:#f8fafc;padding:24px 40px;border-top:3px solid #6366f1;text-align:center;font-size:12px;color:#475569}");
-    parts.push("@media print{body{-webkit-print-color-adjust:exact;print-color-adjust:exact}}");
-    parts.push("</style></head><body>");
-    parts.push("<div class='hdr'><div><div class='co-name'>" + COMPANY_INFO.name + "</div>");
-    parts.push("<div class='co-tag'>" + COMPANY_INFO.tagline + "</div>");
-    parts.push("<div style='margin-top:12px;font-size:12px;color:#94a3b8'>" + COMPANY_INFO.founder + " | " + COMPANY_INFO.title + "<br>" + COMPANY_INFO.email + "<br>" + COMPANY_INFO.phone + "<br>" + COMPANY_INFO.website + "</div></div>");
-    parts.push("<div style='text-align:right'><div class='inv-title'>INVOICE</div>");
-    parts.push("<div style='font-size:14px;color:#94a3b8;margin-top:4px'>" + invoice.invoiceNo + "</div>");
-    parts.push("<div style='margin-top:10px;font-size:12px;color:#94a3b8'>Date: " + invoice.date + "<br>Due: " + (invoice.dueDate || "N/A") + "</div>");
-    parts.push("<div style='margin-top:10px;display:inline-block;padding:6px 16px;border-radius:20px;font-size:13px;font-weight:700;background:" + sc + "30;color:" + sc + ";border:2px solid " + sc + "'>" + invoice.status.toUpperCase() + "</div></div></div>");
-    parts.push("<div class='body'><div class='two'>");
-    parts.push("<div><div class='sec-title'>Bill To</div><div class='box'>");
-    parts.push("<div style='font-size:16px;font-weight:700'>" + invoice.customer.name + "</div>");
-    parts.push("<div style='font-size:13px;color:#475569;margin-top:3px'>" + (invoice.customer.company || "") + "</div>");
-    parts.push("<div style='font-size:13px;color:#475569'>" + invoice.customer.phone + "</div></div></div>");
-    parts.push("<div><div class='sec-title'>Invoice Info</div><div class='box'>");
-    parts.push("<div style='font-size:13px;color:#475569'>Invoice: <strong>" + invoice.invoiceNo + "</strong></div>");
-    parts.push("<div style='font-size:13px;color:#475569'>Date: " + invoice.date + "</div>");
-    parts.push("<div style='font-size:13px;color:#475569'>Due: " + (invoice.dueDate || "N/A") + "</div></div></div></div>");
-    parts.push("<table><thead><tr><th>Service / Description</th><th style='text-align:center'>Qty</th><th style='text-align:right'>Unit Price</th><th style='text-align:right'>Total</th></tr></thead>");
-    parts.push("<tbody>" + rows);
-    parts.push("<tr><td colspan='3' style='padding:14px;text-align:right;font-weight:700;font-size:15px'>TOTAL AMOUNT</td>");
-    parts.push("<td style='padding:14px;text-align:right;font-size:20px;font-weight:900;color:#6366f1'>" + formatPKR(total) + "</td></tr></tbody></table>");
-    parts.push("<div style='display:flex;justify-content:space-between;align-items:flex-end;margin-top:20px'>");
-    parts.push("<div style='max-width:60%;font-size:12px;color:#475569;line-height:1.6'>");
-    parts.push("<strong style='font-size:11px;text-transform:uppercase;letter-spacing:1px;color:#64748b'>Notes / Terms and Terms</strong><br>");
-    parts.push((invoice.notes || "Payment due within 15 days. Thank you for your business!") + "</div>");
-    parts.push("<div style='text-align:center;border-top:2px solid #334155;padding-top:10px;min-width:200px'>");
-    parts.push("<div style='font-style:italic;color:#6366f1;font-size:16px;margin-bottom:6px'>Adnan Butt</div>");
-    parts.push("<div style='font-weight:700;font-size:14px'>" + COMPANY_INFO.founder + "</div>");
-    parts.push("<div style='font-size:12px;color:#64748b'>" + COMPANY_INFO.title + " | " + COMPANY_INFO.name + "</div></div></div></div>");
-    parts.push("<div class='ftr'>" + COMPANY_INFO.name + " | " + COMPANY_INFO.email + " | " + COMPANY_INFO.phone + " | " + COMPANY_INFO.website + "</div>");
-    parts.push("</body></html>");
+    parts.push("*{box-sizing:border-box;margin:0;padding:0}");
+    parts.push("body{font-family:Arial,sans-serif;color:#1a1a2e;-webkit-print-color-adjust:exact;print-color-adjust:exact}");
 
-    var htmlContent = parts.join("");
-    // Open in new window and trigger print to PDF
-    var win = window.open("", "_blank", "width=800,height=600");
-    if (!win) { notify("Please allow popups in your browser!", true); return; }
-    win.document.write(htmlContent);
+    if (hasLetterhead) {
+      // Letterhead mode - image as background/header
+      parts.push(".page{width:100%;min-height:100vh;position:relative}");
+      parts.push(".letterhead-img{width:100%;display:block;max-height:200px;object-fit:cover;object-position:top}");
+      parts.push(".content{padding:30px 40px}");
+    } else {
+      // Default header
+      parts.push(".page{width:100%;min-height:100vh}");
+      parts.push(".hdr{background:#1e293b;color:white;padding:28px 40px;display:flex;justify-content:space-between;align-items:flex-start}");
+      parts.push(".co-name{font-size:26px;font-weight:900;color:#60a5fa}");
+      parts.push(".co-tag{font-size:12px;color:#94a3b8;margin-top:4px}");
+      parts.push(".content{padding:30px 40px}");
+    }
+
+    parts.push(".inv-title{font-size:28px;font-weight:900;color:#1e293b;letter-spacing:2px}");
+    parts.push(".inv-no{font-size:13px;color:#64748b;margin-top:4px}");
+    parts.push(".two{display:grid;grid-template-columns:1fr 1fr;gap:24px;margin:20px 0}");
+    parts.push(".sec-title{font-size:10px;text-transform:uppercase;letter-spacing:1px;color:#64748b;font-weight:700;margin-bottom:8px}");
+    parts.push(".box{background:#f8fafc;border-radius:8px;padding:14px;border:1px solid #e2e8f0}");
+    parts.push("table{width:100%;border-collapse:collapse;margin:16px 0}");
+    parts.push("th{background:#1e293b;color:white;padding:10px 12px;text-align:left;font-size:11px;text-transform:uppercase}");
+    parts.push("td{padding:10px 12px;border-bottom:1px solid #f1f5f9;font-size:13px}");
+    parts.push(".status-pill{display:inline-block;padding:4px 14px;border-radius:20px;font-size:12px;font-weight:700;text-transform:uppercase}");
+    parts.push(".sig-box{text-align:center;border-top:2px solid #334155;padding-top:10px;min-width:180px}");
+    parts.push(".ftr{background:#f8fafc;padding:18px 40px;border-top:3px solid #6366f1;text-align:center;font-size:11px;color:#475569;margin-top:20px}");
+    parts.push("@media print{body{-webkit-print-color-adjust:exact;print-color-adjust:exact}.no-print{display:none}}");
+    parts.push("</style></head><body><div class='page'>");
+
+    if (hasLetterhead) {
+      // Show letterhead image at top
+      parts.push("<img src='" + lh + "' class='letterhead-img' alt='Letterhead' />");
+      parts.push("<div class='content'>");
+      // Invoice title bar
+      parts.push("<div style='display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:20px;padding-bottom:16px;border-bottom:2px solid #e2e8f0'>");
+      parts.push("<div><div class='inv-title'>INVOICE</div><div class='inv-no'>" + invoice.invoiceNo + "</div></div>");
+      parts.push("<div style='text-align:right'>");
+      parts.push("<div style='font-size:12px;color:#64748b'>Date: <strong>" + invoice.date + "</strong></div>");
+      parts.push("<div style='font-size:12px;color:#64748b'>Due: <strong>" + (invoice.dueDate || "N/A") + "</strong></div>");
+      parts.push("<div style='margin-top:8px'><span class='status-pill' style='background:" + sc + "20;color:" + sc + ";border:1.5px solid " + sc + "'>" + invoice.status.toUpperCase() + "</span></div>");
+      parts.push("</div></div>");
+    } else {
+      // Default header
+      parts.push("<div class='hdr'>");
+      parts.push("<div><div class='co-name'>" + COMPANY_INFO.name + "</div>");
+      parts.push("<div class='co-tag'>" + COMPANY_INFO.tagline + "</div>");
+      parts.push("<div style='margin-top:10px;font-size:11px;color:#94a3b8'>" + COMPANY_INFO.founder + " | " + COMPANY_INFO.title + "<br>" + COMPANY_INFO.email + "<br>" + COMPANY_INFO.phone + "<br>" + COMPANY_INFO.website + "</div></div>");
+      parts.push("<div style='text-align:right'><div style='font-size:28px;font-weight:900;color:#c8f03c;letter-spacing:2px'>INVOICE</div>");
+      parts.push("<div style='font-size:13px;color:#94a3b8;margin-top:4px'>" + invoice.invoiceNo + "</div>");
+      parts.push("<div style='margin-top:8px;font-size:11px;color:#94a3b8'>Date: " + invoice.date + "<br>Due: " + (invoice.dueDate || "N/A") + "</div>");
+      parts.push("<div style='margin-top:8px'><span class='status-pill' style='background:" + sc + "20;color:" + sc + ";border:1.5px solid " + sc + "'>" + invoice.status.toUpperCase() + "</span></div>");
+      parts.push("</div></div>");
+      parts.push("<div class='content'>");
+    }
+
+    // Bill To + Invoice Info
+    parts.push("<div class='two'>");
+    parts.push("<div><div class='sec-title'>Bill To</div><div class='box'>");
+    parts.push("<div style='font-size:15px;font-weight:700'>" + invoice.customer.name + "</div>");
+    parts.push("<div style='font-size:12px;color:#475569;margin-top:2px'>" + (invoice.customer.company || "") + "</div>");
+    parts.push("<div style='font-size:12px;color:#475569'>" + (invoice.customer.phone || "") + "</div></div></div>");
+    parts.push("<div><div class='sec-title'>Invoice Info</div><div class='box'>");
+    parts.push("<div style='font-size:12px;color:#475569'>Invoice No: <strong>" + invoice.invoiceNo + "</strong></div>");
+    parts.push("<div style='font-size:12px;color:#475569'>Issue Date: " + invoice.date + "</div>");
+    parts.push("<div style='font-size:12px;color:#475569'>Due Date: " + (invoice.dueDate || "N/A") + "</div></div></div></div>");
+
+    // Services table
+    parts.push("<table><thead><tr>");
+    parts.push("<th>Service / Description</th><th style='text-align:center'>Qty</th><th style='text-align:right'>Unit Price</th><th style='text-align:right'>Total</th>");
+    parts.push("</tr></thead><tbody>" + rows);
+    parts.push("<tr><td colspan='3' style='padding:12px;text-align:right;font-weight:700;font-size:14px;background:#f8fafc'>TOTAL AMOUNT</td>");
+    parts.push("<td style='padding:12px;text-align:right;font-size:18px;font-weight:900;color:#6366f1;background:#f8fafc'>" + formatPKR(total) + "</td></tr>");
+    parts.push("</tbody></table>");
+
+    // Notes + Signature
+    parts.push("<div style='display:flex;justify-content:space-between;align-items:flex-end;margin-top:24px'>");
+    parts.push("<div style='max-width:55%;font-size:12px;color:#475569;line-height:1.6'>");
+    parts.push("<strong style='font-size:10px;text-transform:uppercase;letter-spacing:1px;color:#64748b'>Notes & Terms</strong><br>");
+    parts.push((invoice.notes || "Payment due within 15 days of invoice date. Thank you for your business!"));
+    parts.push("</div>");
+    parts.push("<div class='sig-box'>");
+    parts.push("<div style='font-style:italic;color:#6366f1;font-size:15px;margin-bottom:5px'>Adnan Butt</div>");
+    parts.push("<div style='font-weight:700;font-size:13px'>" + COMPANY_INFO.founder + "</div>");
+    parts.push("<div style='font-size:11px;color:#64748b'>" + COMPANY_INFO.title + " | " + COMPANY_INFO.name + "</div></div></div>");
+
+    // Footer
+    if (!hasLetterhead) {
+      parts.push("<div class='ftr'>" + COMPANY_INFO.name + " | " + COMPANY_INFO.email + " | " + COMPANY_INFO.phone + " | " + COMPANY_INFO.website + "</div>");
+    }
+
+    parts.push("</div></div></body></html>");
+    return parts.join("");
+  }
+
+  function printInvoice(invoice) {
+    var doc = window.open("", "_blank", "width=900,height=700");
+    if (!doc) { notify("Please allow popups!", true); return; }
+    doc.document.write(buildInvoiceHTML(invoice, letterhead));
+    doc.document.close();
+    setTimeout(function() { doc.print(); }, 700);
+  }
+
+  function downloadInvoicePDF(invoice) {
+    var win = window.open("", "_blank", "width=900,height=700");
+    if (!win) { notify("Please allow popups!", true); return; }
+    win.document.write(buildInvoiceHTML(invoice, letterhead));
     win.document.close();
     win.focus();
-    // Add download instruction
-    win.document.title = invoice.invoiceNo + " - " + invoice.customer.name;
-    setTimeout(function() {
-      win.print();
-    }, 800);
+    setTimeout(function() { win.print(); }, 700);
     notify("Select 'Save as PDF' in the print dialog!");
   }
+
+
+
+  var C = {
+    primary: "#6366f1", primaryDark: "#4f46e5", primaryLight: "#eef2ff",
+    danger: "#f43f5e", success: "#22c55e", warning: "#f59e0b",
+    ink: "#0f172a", ink2: "#334155", muted: "#64748b",
+    border: "#e2e8f0", bg: "#f8fafc", card: "#ffffff", sidebar: "#1e293b",
+  };
 
   var ss = {
     app: { display: "flex", minHeight: "100vh", fontFamily: "Inter,sans-serif", background: C.bg, color: C.ink },
@@ -1100,7 +1070,7 @@ export default function App() {
     userchip: { margin: "12px 16px 0", background: "#273549", borderRadius: 10, padding: "10px 14px", display: "flex", alignItems: "center", gap: 10 },
     avatar: { width: 32, height: 32, borderRadius: "50%", background: C.primary, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 13, fontWeight: 700, color: "white", flexShrink: 0 },
     nav: { padding: "12px 0", flex: 1 },
-    navitem: { display: "flex", alignItems: "center", gap: 10, padding: "11px 20px", color: "#94a3b8", fontSize: 13, cursor: "pointer", borderLeft: "3px solid transparent", fontWeight: 500, transition: "all 0.15s" },
+    navitem: { display: "flex", alignItems: "center", gap: 10, padding: "11px 20px", color: "#94a3b8", fontSize: 13, cursor: "pointer", borderLeft: "3px solid transparent", fontWeight: 500 },
     navactive: { color: "#a5b4fc", borderLeftColor: C.primary, background: "#253047" },
     sidebottom: { padding: 16, borderTop: "1px solid #334155" },
     main: { marginLeft: 230, flex: 1, padding: "36px 40px" },
@@ -1116,8 +1086,8 @@ export default function App() {
     tblrow: { padding: "14px 18px", borderBottom: "1px solid " + C.border, alignItems: "center", fontSize: 13, display: "grid" },
     tbl4: { gridTemplateColumns: "2fr 1fr 1fr 1fr" },
     plansgrid: { display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: 20 },
-    plancard: { background: C.card, border: "2px solid " + C.border, borderRadius: 16, padding: "28px 22px", position: "relative", transition: "all 0.2s" },
-    modal: { background: C.card, borderRadius: 16, padding: 28, width: "100%", maxWidth: 480, boxShadow: "0 20px 60px rgba(0,0,0,0.15)" },
+    plancard: { background: C.card, border: "2px solid " + C.border, borderRadius: 16, padding: "28px 22px", position: "relative" },
+    modal: { background: C.card, borderRadius: 16, padding: 28, width: "100%", maxWidth: 500, boxShadow: "0 20px 60px rgba(0,0,0,0.15)", maxHeight: "90vh", overflowY: "auto" },
     overlay: { position: "fixed", inset: 0, background: "rgba(15,23,42,0.55)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 999, padding: 20 },
     infobx: { background: "#fef9c3", border: "1px solid #fde68a", borderRadius: 8, padding: "12px 16px", fontSize: 12, color: "#78350f", lineHeight: 1.7 },
     sucbx: { background: "#f0fdf4", border: "1px solid #86efac", borderRadius: 8, padding: "12px 16px", fontSize: 12, color: "#166534" },
@@ -1127,6 +1097,44 @@ export default function App() {
     toast: { position: "fixed", bottom: 28, right: 28, background: "#1e293b", color: "#f1f5f9", padding: "13px 20px", borderRadius: 10, fontSize: 13, display: "flex", alignItems: "center", gap: 8, boxShadow: "0 8px 24px rgba(0,0,0,0.18)", zIndex: 9999 },
   };
 
+  function Input(props) {
+    var style = { width: "100%", background: props.dark ? "#273549" : C.bg, border: "1.5px solid " + (props.dark ? "#334155" : C.border), borderRadius: 9, padding: "11px 14px", fontFamily: "Inter,sans-serif", fontSize: 16, color: props.dark ? "#f1f5f9" : C.ink, outline: "none", WebkitAppearance: "none" };
+    var p = Object.assign({}, props);
+    delete p.dark;
+    return React.createElement("input", Object.assign({ style: style }, p));
+  }
+
+  function Btn(props) {
+    var bgMap = { primary: C.primary, danger: C.danger, success: C.success, dark: C.sidebar, outline: "transparent" };
+    var bg = bgMap[props.variant] || C.primary;
+    return React.createElement("button", { onClick: props.onClick, disabled: props.disabled, style: { background: bg, color: props.variant === "outline" ? C.muted : "white", border: props.variant === "outline" ? "1.5px solid " + C.border : "none", borderRadius: 9, padding: props.small ? "8px 14px" : "11px 20px", fontFamily: "Poppins,sans-serif", fontSize: props.small ? 12 : 13, fontWeight: 600, cursor: props.disabled ? "not-allowed" : "pointer", opacity: props.disabled ? 0.6 : 1, whiteSpace: "nowrap", display: "inline-flex", alignItems: "center", gap: 6 } }, props.children);
+  }
+
+  function Badge(props) {
+    var colors = { pub: { bg: "#dcfce7", color: "#16a34a" }, draft: { bg: "#fef9c3", color: "#ca8a04" }, active: { bg: "#dcfce7", color: "#16a34a" }, disabled: { bg: "#fee2e2", color: "#dc2626" }, Basic: { bg: "#f1f5f9", color: "#475569" }, Pro: { bg: "#dbeafe", color: "#2563eb" }, Agency: { bg: "#fef3c7", color: "#d97706" }, AgencyUnlimited: { bg: "#f3e8ff", color: "#7c3aed" } };
+    var s = colors[props.type] || { bg: "#eef2ff", color: "#6366f1" };
+    return React.createElement("span", { style: { background: s.bg, color: s.color, fontSize: 10, fontWeight: 600, padding: "3px 9px", borderRadius: 20, display: "inline-flex", alignItems: "center", gap: 4 } },
+      React.createElement("span", { style: { width: 5, height: 5, borderRadius: "50%", background: "currentColor" } }),
+      props.children
+    );
+  }
+
+  var totalPub = posts.filter(function(p) { return p.status === "published"; }).length;
+
+  var NAV = isAdmin ? [
+    { id: "generate", label: "Generate Post" },
+    { id: "dashboard", label: "Dashboard" },
+    { id: "posts", label: "My Posts" },
+    { id: "clients", label: "Clients" },
+    { id: "invoices", label: "Invoices" },
+    { id: "admin", label: "Admin Panel" },
+    { id: "plans", label: "Plans" },
+  ] : [
+    { id: "generate", label: "Generate Post" },
+    { id: "posts", label: "My Posts" },
+    { id: "settings", label: "Settings" },
+  ];
+
   // AUTH SCREEN
   if (!session) {
     return React.createElement("div", { style: { minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", background: "linear-gradient(135deg,#1e293b,#0f172a)", padding: 20, fontFamily: "Inter,sans-serif" } },
@@ -1134,51 +1142,36 @@ export default function App() {
         React.createElement("div", { style: { fontFamily: "Poppins,sans-serif", fontWeight: 800, fontSize: 22, color: C.primary, marginBottom: 4 } }, "PostRank AI"),
         React.createElement("div", { style: { fontSize: 12, color: C.muted, marginBottom: 28 } }, "SEO Automation Platform"),
         React.createElement("div", { style: { display: "flex", background: C.bg, borderRadius: 10, padding: 4, marginBottom: 24 } },
-          React.createElement("button", { onClick: function() { setAuthTab("login"); setAuthError(""); }, style: { flex: 1, padding: "9px", border: "none", borderRadius: 8, fontFamily: "Inter,sans-serif", fontSize: 13, fontWeight: authTab === "login" ? 600 : 400, cursor: "pointer", background: authTab === "login" ? "white" : "transparent", color: authTab === "login" ? C.primary : C.muted, boxShadow: authTab === "login" ? "0 1px 4px rgba(0,0,0,0.1)" : "none" } }, "Login"),
-          React.createElement("button", { onClick: function() { setAuthTab("register"); setAuthError(""); }, style: { flex: 1, padding: "9px", border: "none", borderRadius: 8, fontFamily: "Inter,sans-serif", fontSize: 13, fontWeight: authTab === "register" ? 600 : 400, cursor: "pointer", background: authTab === "register" ? "white" : "transparent", color: authTab === "register" ? C.primary : C.muted, boxShadow: authTab === "register" ? "0 1px 4px rgba(0,0,0,0.1)" : "none" } }, "Sign Up")
+          React.createElement("button", { onClick: function() { setAuthTab("login"); setAuthError(""); }, style: { flex: 1, padding: 9, border: "none", borderRadius: 8, fontFamily: "Inter,sans-serif", fontSize: 13, fontWeight: authTab === "login" ? 600 : 400, cursor: "pointer", background: authTab === "login" ? "white" : "transparent", color: authTab === "login" ? C.primary : C.muted } }, "Login"),
+          React.createElement("button", { onClick: function() { setAuthTab("register"); setAuthError(""); }, style: { flex: 1, padding: 9, border: "none", borderRadius: 8, fontFamily: "Inter,sans-serif", fontSize: 13, fontWeight: authTab === "register" ? 600 : 400, cursor: "pointer", background: authTab === "register" ? "white" : "transparent", color: authTab === "register" ? C.primary : C.muted } }, "Sign Up")
         ),
         authError ? React.createElement("div", { style: ss.errbx }, authError) : null,
         authSuccess ? React.createElement("div", { style: ss.sucbx }, authSuccess) : null,
         authTab === "login"
           ? React.createElement("div", null,
-              React.createElement("div", { style: ss.fmgroup }, React.createElement("label", { style: ss.fmlabel }, "Email"), React.createElement(Input, { type: "email", placeholder: "Username or email", value: loginEmail, onChange: function(e) { setLoginEmail(e.target.value); }, onKeyDown: function(e) { if (e.key === "Enter") handleLogin(); } })),
-              React.createElement("div", { style: ss.fmgroup }, React.createElement("label", { style: ss.fmlabel }, "Password"), React.createElement(Input, { type: "password", placeholder: "password", value: loginPw, onChange: function(e) { setLoginPw(e.target.value); }, onKeyDown: function(e) { if (e.key === "Enter") handleLogin(); } })),
-              React.createElement(Btn, { variant: "primary", onClick: handleLogin, disabled: authLoading, style: { width: "100%" } }, authLoading ? "Logging in..." : "Login"),
+              React.createElement("div", { style: ss.fmgroup }, React.createElement("label", { style: ss.fmlabel }, "Username or Email"), React.createElement("input", { type: "text", placeholder: "admin or your@email.com", value: loginEmail, onChange: function(e) { setLoginEmail(e.target.value); }, onKeyDown: function(e) { if (e.key === "Enter") handleLogin(); }, autoComplete: "username", autoCorrect: "off", autoCapitalize: "off", spellCheck: false, style: { width: "100%", background: "#f8fafc", border: "1.5px solid #e2e8f0", borderRadius: 9, padding: "11px 14px", fontFamily: "Inter,sans-serif", fontSize: 16, color: "#0f172a", outline: "none", WebkitAppearance: "none" } })),
+              React.createElement("div", { style: ss.fmgroup }, React.createElement("label", { style: ss.fmlabel }, "Password"), React.createElement("input", { type: "password", placeholder: "your password", value: loginPw, onChange: function(e) { setLoginPw(e.target.value); }, onKeyDown: function(e) { if (e.key === "Enter") handleLogin(); }, autoComplete: "current-password", style: { width: "100%", background: "#f8fafc", border: "1.5px solid #e2e8f0", borderRadius: 9, padding: "11px 14px", fontFamily: "Inter,sans-serif", fontSize: 16, color: "#0f172a", outline: "none", WebkitAppearance: "none" } })),
+              React.createElement(Btn, { variant: "primary", onClick: handleLogin, disabled: authLoading }, authLoading ? "Logging in..." : "Login"),
               React.createElement("div", { style: { fontSize: 11, color: C.muted, textAlign: "center", marginTop: 14 } }, "Admin login: username 'admin'")
             )
           : React.createElement("div", null,
-              React.createElement("div", { style: ss.fmgroup }, React.createElement("label", { style: ss.fmlabel }, "Full Name"), React.createElement(Input, { placeholder: "Your full name", value: regName, onChange: function(e) { setRegName(e.target.value); } })),
-              React.createElement("div", { style: ss.fmgroup }, React.createElement("label", { style: ss.fmlabel }, "Email"), React.createElement(Input, { type: "email", placeholder: "your@email.com", value: regEmail, onChange: function(e) { setRegEmail(e.target.value); } })),
-              React.createElement("div", { style: ss.fmgroup }, React.createElement("label", { style: ss.fmlabel }, "Password"), React.createElement(Input, { type: "password", placeholder: "Min 6 characters", value: regPw, onChange: function(e) { setRegPw(e.target.value); } })),
+              React.createElement("div", { style: ss.fmgroup }, React.createElement("label", { style: ss.fmlabel }, "Full Name"), React.createElement("input", { type: "text", placeholder: "Your full name", value: regName, onChange: function(e) { setRegName(e.target.value); }, autoCorrect: "off", autoCapitalize: "words", style: { width: "100%", background: "#f8fafc", border: "1.5px solid #e2e8f0", borderRadius: 9, padding: "11px 14px", fontFamily: "Inter,sans-serif", fontSize: 16, color: "#0f172a", outline: "none" } })),
+              React.createElement("div", { style: ss.fmgroup }, React.createElement("label", { style: ss.fmlabel }, "Email"), React.createElement("input", { type: "email", placeholder: "your@email.com", value: regEmail, onChange: function(e) { setRegEmail(e.target.value); }, autoComplete: "email", autoCapitalize: "off", style: { width: "100%", background: "#f8fafc", border: "1.5px solid #e2e8f0", borderRadius: 9, padding: "11px 14px", fontFamily: "Inter,sans-serif", fontSize: 16, color: "#0f172a", outline: "none" } })),
+              React.createElement("div", { style: ss.fmgroup }, React.createElement("label", { style: ss.fmlabel }, "Password"), React.createElement("input", { type: "password", placeholder: "Min 6 characters", value: regPw, onChange: function(e) { setRegPw(e.target.value); }, autoComplete: "new-password", style: { width: "100%", background: "#f8fafc", border: "1.5px solid #e2e8f0", borderRadius: 9, padding: "11px 14px", fontFamily: "Inter,sans-serif", fontSize: 16, color: "#0f172a", outline: "none" } })),
               React.createElement("div", { style: ss.fmgroup }, React.createElement("label", { style: ss.fmlabel }, "Plan"),
                 React.createElement("select", { value: regPlan, onChange: function(e) { setRegPlan(e.target.value); }, style: { width: "100%", background: C.bg, border: "1.5px solid " + C.border, borderRadius: 9, padding: "11px 14px", fontFamily: "Inter,sans-serif", fontSize: 13 } },
-                  React.createElement("option", { value: "Basic" }, "Basic - $19/mo"),
-                  React.createElement("option", { value: "Pro" }, "Pro - $49/mo"),
-                  React.createElement("option", { value: "Agency" }, "Agency - $149/mo")
+                  React.createElement("option", { value: "Basic" }, "Basic - $19/mo (50 credits)"),
+                  React.createElement("option", { value: "Pro" }, "Pro - $49/mo (250 credits)"),
+                  React.createElement("option", { value: "Agency" }, "Agency - $149/mo (1500 credits)")
                 )
               ),
-              React.createElement(Btn, { variant: "primary", onClick: handleRegister, disabled: authLoading }, authLoading ? "Creating..." : "Create Account")
+              React.createElement(Btn, { variant: "primary", onClick: handleRegister, disabled: authLoading }, authLoading ? "Creating account..." : "Create Account")
             )
       )
     );
   }
 
-  var NAV = isAdmin ? [
-    { id: "generate", icon: "*", label: "Generate Post" },
-    { id: "dashboard", icon: "D", label: "Dashboard" },
-    { id: "posts", icon: "P", label: "My Posts" },
-    { id: "clients", icon: "C", label: "Clients" },
-    { id: "invoices", icon: "I", label: "Invoices" },
-    { id: "admin", icon: "A", label: "Admin Panel" },
-    { id: "plans", icon: "*", label: "Plans" },
-  ] : [
-    { id: "generate", icon: "*", label: "Generate Post" },
-    { id: "posts", icon: "P", label: "My Posts" },
-    { id: "settings", icon: "S", label: "Settings" },
-  ];
-
   return React.createElement("div", { style: ss.app },
-    // SIDEBAR
     React.createElement("aside", { style: ss.sidebar },
       React.createElement("div", { style: ss.logowrap },
         React.createElement("div", { style: ss.logotext }, "PostRank AI"),
@@ -1193,58 +1186,41 @@ export default function App() {
       ),
       React.createElement("nav", { style: ss.nav },
         NAV.map(function(n) {
-          return React.createElement("div", { key: n.id, onClick: function() { setView(n.id); }, style: Object.assign({}, ss.navitem, view === n.id ? ss.navactive : {}) },
-            React.createElement("span", { style: { fontSize: 15, width: 18, textAlign: "center" } }, n.icon),
-            n.label
-          );
+          return React.createElement("div", { key: n.id, onClick: function() { setView(n.id); }, style: Object.assign({}, ss.navitem, view === n.id ? ss.navactive : {}) }, n.label);
         })
       ),
       React.createElement("div", { style: ss.sidebottom },
         !isAdmin ? React.createElement("div", { style: { background: "#273549", borderRadius: 10, padding: "12px 14px", marginBottom: 10 } },
-          // Plan badge
           React.createElement("div", { style: { display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 } },
             React.createElement("span", { style: { fontSize: 10, color: "#64748b", textTransform: "uppercase", letterSpacing: 1 } }, "Monthly Credits"),
-            React.createElement("span", { style: { background: C.primary, color: "white", fontSize: 9, fontWeight: 700, padding: "2px 8px", borderRadius: 10 } }, profile ? profile.plan : "Basic")
+            React.createElement("span", { style: { background: C.primary, color: "white", fontSize: 9, fontWeight: 700, padding: "2px 8px", borderRadius: 10 } }, profile.plan || "Basic")
           ),
-          // Credits display
           credits && credits.is_unlimited
-            ? React.createElement("div", { style: { textAlign: "center", padding: "6px 0" } },
-                React.createElement("div", { style: { fontFamily: "Poppins,sans-serif", fontSize: 18, fontWeight: 700, color: "#a5b4fc" } }, "UNLIMITED"),
-                React.createElement("div", { style: { fontSize: 10, color: "#64748b", marginTop: 2 } }, "Agency Unlimited Plan")
+            ? React.createElement("div", { style: { textAlign: "center" } },
+                React.createElement("div", { style: { fontFamily: "Poppins,sans-serif", fontSize: 16, fontWeight: 700, color: "#a5b4fc" } }, "UNLIMITED"),
+                React.createElement("div", { style: { fontSize: 10, color: "#64748b" } }, "Agency Unlimited Plan")
               )
             : React.createElement("div", null,
                 React.createElement("div", { style: { display: "flex", justifyContent: "space-between", marginBottom: 5 } },
                   React.createElement("span", { style: { fontSize: 11, color: "#94a3b8" } }, "Remaining"),
-                  React.createElement("span", { style: { fontFamily: "Poppins,sans-serif", fontSize: 14, fontWeight: 700, color: getRemainingCredits() <= 5 ? C.danger : "#a5b4fc" } },
-                    getRemainingCredits() + "/" + getTotalCredits()
-                  )
+                  React.createElement("span", { style: { fontFamily: "Poppins,sans-serif", fontSize: 14, fontWeight: 700, color: getRemainingCredits() <= 5 ? C.danger : "#a5b4fc" } }, getRemainingCredits() + "/" + getTotalCredits())
                 ),
                 React.createElement("div", { style: { background: "#1e293b", borderRadius: 4, height: 6, overflow: "hidden", marginBottom: 4 } },
-                  React.createElement("div", { style: {
-                    width: getTotalCredits() > 0 ? Math.round((getRemainingCredits() / getTotalCredits()) * 100) + "%" : "0%",
-                    height: "100%",
-                    background: getRemainingCredits() <= 5 ? C.danger : getRemainingCredits() <= getTotalCredits() * 0.2 ? C.warning : C.primary,
-                    borderRadius: 4,
-                    transition: "width 0.5s"
-                  }})
+                  React.createElement("div", { style: { width: getTotalCredits() > 0 ? Math.round(getRemainingCredits() / getTotalCredits() * 100) + "%" : "0%", height: "100%", background: getRemainingCredits() <= 5 ? C.danger : C.primary, borderRadius: 4 } })
                 ),
-                getRemainingCredits() <= 5
-                  ? React.createElement("div", { style: { fontSize: 10, color: C.danger, fontWeight: 600 } }, "Credits almost used! Please upgrade your plan.")
-                  : React.createElement("div", { style: { fontSize: 10, color: "#64748b" } }, "Resets monthly")
+                getRemainingCredits() <= 5 ? React.createElement("div", { style: { fontSize: 10, color: C.danger, fontWeight: 600 } }, "Credits almost exhausted!") : React.createElement("div", { style: { fontSize: 10, color: "#64748b" } }, "Resets monthly")
               )
         ) : null,
-        React.createElement("button", { onClick: handleLogout, style: { width: "100%", background: "#273549", border: "1px solid #334155", borderRadius: 9, padding: 10, color: "#94a3b8", fontFamily: "Inter,sans-serif", fontSize: 12, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 8 } }, "Logout")
+        React.createElement("button", { onClick: handleLogout, style: { width: "100%", background: "#273549", border: "1px solid #334155", borderRadius: 9, padding: 10, color: "#94a3b8", fontFamily: "Inter,sans-serif", fontSize: 12, cursor: "pointer" } }, "Logout")
       )
     ),
 
-    // MAIN
     React.createElement("main", { style: ss.main },
 
-      // GENERATE
       view === "generate" && React.createElement("div", null,
         React.createElement("div", { style: { marginBottom: 28 } },
           React.createElement("div", { style: { fontFamily: "Poppins,sans-serif", fontSize: 24, fontWeight: 700 } }, "Generate Post"),
-          React.createElement("div", { style: { fontSize: 12, color: C.muted, marginTop: 5 } }, "Enter product -> AI generates everything -> Save -> Publish")
+          React.createElement("div", { style: { fontSize: 12, color: C.muted, marginTop: 5 } }, "Product or Blog -> AI writes everything -> Save -> Publish")
         ),
         React.createElement("div", { style: ss.carddark },
           React.createElement("div", { style: { fontFamily: "Poppins,sans-serif", fontSize: 18, fontWeight: 600, color: "#f1f5f9", marginBottom: 16 } }, postType === "blog" ? "What is your blog topic?" : "What are you selling today?"),
@@ -1258,18 +1234,17 @@ export default function App() {
           ),
           React.createElement("div", { style: { display: "flex", gap: 14, alignItems: "flex-end", flexWrap: "wrap" } },
             React.createElement("div", { style: { flex: 1 } },
-              React.createElement("div", { style: { fontSize: 11, color: "#94a3b8", textTransform: "uppercase", letterSpacing: 1, marginBottom: 7, fontWeight: 500 } }, postType === "blog" ? "Blog Topic" : "Product Title"),
+              React.createElement("div", { style: { fontSize: 11, color: "#94a3b8", textTransform: "uppercase", letterSpacing: 1, marginBottom: 7 } }, postType === "blog" ? "Blog Topic" : "Product Title"),
               React.createElement(Input, { dark: true, placeholder: postType === "blog" ? "e.g. Best Sneakers in Pakistan" : "e.g. Nike Running Shoes", value: productTitle, onChange: function(e) { setProductTitle(e.target.value); }, onKeyDown: function(e) { if (e.key === "Enter") handleGenerate(); } })
             ),
             React.createElement("div", { style: { maxWidth: 170 } },
-              React.createElement("div", { style: { fontSize: 11, color: "#94a3b8", textTransform: "uppercase", letterSpacing: 1, marginBottom: 7, fontWeight: 500 } }, postType === "blog" ? "Focus Keyword" : "Price"),
+              React.createElement("div", { style: { fontSize: 11, color: "#94a3b8", textTransform: "uppercase", letterSpacing: 1, marginBottom: 7 } }, postType === "blog" ? "Focus Keyword" : "Price"),
               React.createElement(Input, { dark: true, placeholder: postType === "blog" ? "keyword" : "e.g. PKR 3000", value: productPrice, onChange: function(e) { setProductPrice(e.target.value); }, onKeyDown: function(e) { if (e.key === "Enter") handleGenerate(); } })
             ),
             React.createElement(Btn, { variant: "primary", onClick: handleGenerate, disabled: generating }, generating ? "Generating..." : "Generate Post")
           ),
           genError ? React.createElement("div", { style: ss.errbx }, genError) : null
         ),
-
         generated && React.createElement("div", { style: { background: C.card, border: "1px solid " + C.border, borderRadius: 14, overflow: "hidden", marginBottom: 20 } },
           React.createElement("div", { style: { background: "#1e293b", padding: "14px 20px", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, flexWrap: "wrap" } },
             React.createElement("div", { style: { display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" } },
@@ -1289,7 +1264,7 @@ export default function App() {
               React.createElement("div", { style: { fontFamily: "Poppins,sans-serif", fontWeight: 700, fontSize: 14, color: C.primaryDark, background: C.bg, border: "1px solid " + C.border, borderRadius: 8, padding: "11px 13px" } }, generated.seoTitle)
             ),
             React.createElement("div", { style: { gridColumn: "1/-1" } },
-              React.createElement("div", { style: { fontSize: 10, textTransform: "uppercase", letterSpacing: 1, color: C.muted, marginBottom: 7, fontWeight: 600 } }, "Description"),
+              React.createElement("div", { style: { fontSize: 10, textTransform: "uppercase", letterSpacing: 1, color: C.muted, marginBottom: 7, fontWeight: 600 } }, "Description (200+ words)"),
               React.createElement("div", { style: { fontSize: 13, color: C.ink, lineHeight: 1.7, background: C.bg, border: "1px solid " + C.border, borderRadius: 8, padding: "11px 13px", whiteSpace: "pre-line" } }, generated.description)
             ),
             React.createElement("div", { style: { gridColumn: "1/-1" } },
@@ -1297,7 +1272,7 @@ export default function App() {
               React.createElement("div", { style: { fontSize: 13, color: C.ink, background: C.bg, border: "1px solid " + C.border, borderRadius: 8, padding: "11px 13px" } }, generated.metaDescription)
             ),
             React.createElement("div", null,
-              React.createElement("div", { style: { fontSize: 10, textTransform: "uppercase", letterSpacing: 1, color: C.muted, marginBottom: 7, fontWeight: 600 } }, "Focus Keywords"),
+              React.createElement("div", { style: { fontSize: 10, textTransform: "uppercase", letterSpacing: 1, color: C.muted, marginBottom: 7, fontWeight: 600 } }, "SEO Keywords"),
               React.createElement("div", { style: { display: "flex", flexWrap: "wrap", gap: 6, padding: "10px 12px", background: C.bg, border: "1px solid " + C.border, borderRadius: 8 } },
                 generated.keywords.map(function(k, i) { return React.createElement("span", { key: i, style: { background: "#334155", color: "#e2e8f0", fontSize: 11, padding: "3px 10px", borderRadius: 20 } }, k); })
               )
@@ -1305,7 +1280,7 @@ export default function App() {
             React.createElement("div", null,
               React.createElement("div", { style: { fontSize: 10, textTransform: "uppercase", letterSpacing: 1, color: C.muted, marginBottom: 7, fontWeight: 600 } }, "Hashtags"),
               React.createElement("div", { style: { display: "flex", flexWrap: "wrap", gap: 6, padding: "10px 12px", background: C.bg, border: "1px solid " + C.border, borderRadius: 8 } },
-                generated.hashtags.map(function(h, i) { return React.createElement("span", { key: i, style: { background: C.primaryLight, color: C.primary, fontSize: 11, padding: "3px 10px", borderRadius: 20 } }, h); })
+                generated.hashtags.map(function(h, i) { return React.createElement("span", { key: i, style: { background: "#eef2ff", color: C.primary, fontSize: 11, padding: "3px 10px", borderRadius: 20 } }, h); })
               )
             ),
             React.createElement("div", { style: { gridColumn: "1/-1" } },
@@ -1322,7 +1297,7 @@ export default function App() {
             ),
             React.createElement("div", { style: { gridColumn: "1/-1" } },
               React.createElement("div", { style: { fontSize: 10, textTransform: "uppercase", letterSpacing: 1, color: C.muted, marginBottom: 7, fontWeight: 600 } }, "Image Alt Texts"),
-              React.createElement("div", { style: { background: C.bg, border: "2px dashed #c7d2fe", borderRadius: 10, padding: 16, marginBottom: 12, textAlign: "center", cursor: "pointer" } },
+              React.createElement("div", { style: { background: C.bg, border: "2px dashed #c7d2fe", borderRadius: 10, padding: 16, marginBottom: 12, textAlign: "center" } },
                 React.createElement("input", { type: "file", accept: "image/*", multiple: true, id: "imgup", style: { display: "none" },
                   onChange: function(e) {
                     var files = Array.from(e.target.files);
@@ -1331,15 +1306,15 @@ export default function App() {
                     var previews = files.map(function(f, i) {
                       var idx = ec + i;
                       var ang = angles[idx] || ("View " + (idx+1));
-                      var alt = generated.seoType === "local" ? generated.product + " " + ang + " - " + generated.price + " Pakistan" : generated.product + " " + ang + " - Buy Online " + generated.price;
-                      return { file: f, url: URL.createObjectURL(f), name: f.name, alt: generated.altTexts[idx] || alt, title: generated.product + " | " + ang + " | " + generated.price };
+                      var alt = generated.seoType === "local" ? "Buy " + generated.product + " " + ang + " - " + generated.price + " Pakistan" : "Premium " + generated.product + " " + ang + " - " + generated.price;
+                      return { file: f, url: URL.createObjectURL(f), name: f.name, alt: alt, title: generated.product + " | " + ang };
                     });
                     setUploadedImages(function(p) { return p.concat(previews); });
                     setImageAlts(function(p) { return p.concat(previews.map(function(x) { return { alt: x.alt, title: x.title }; })); });
                   }
                 }),
                 React.createElement("label", { htmlFor: "imgup", style: { cursor: "pointer", display: "block" } },
-                  React.createElement("div", { style: { fontSize: 28, marginBottom: 6 } }, "+"),
+                  React.createElement("div", { style: { fontSize: 24, marginBottom: 6 } }, "+"),
                   React.createElement("div", { style: { fontSize: 13, fontWeight: 600, color: C.primary } }, "Upload Images"),
                   React.createElement("div", { style: { fontSize: 11, color: C.muted, marginTop: 3 } }, "JPG, PNG, WEBP - Multiple files supported")
                 )
@@ -1347,35 +1322,24 @@ export default function App() {
               uploadedImages.length > 0
                 ? React.createElement("div", { style: { display: "flex", flexDirection: "column", gap: 10 } },
                     uploadedImages.map(function(img, i) {
-                      return React.createElement("div", { key: i, style: { background: C.bg, border: "1px solid " + C.border, borderRadius: 10, padding: 12, display: "flex", gap: 12, alignItems: "flex-start" } },
+                      return React.createElement("div", { key: i, style: { background: C.bg, border: "1px solid " + C.border, borderRadius: 10, padding: 12, display: "flex", gap: 12 } },
                         React.createElement("div", { style: { position: "relative", flexShrink: 0 } },
-                          React.createElement("img", { src: img.url, alt: img.alt, style: { width: 70, height: 70, objectFit: "cover", borderRadius: 8 } }),
-                          React.createElement("span", { style: { position: "absolute", top: -6, left: -6, background: C.primary, color: "white", borderRadius: 4, padding: "1px 6px", fontSize: 9, fontWeight: 700 } }, "IMG " + (i+1))
+                          React.createElement("img", { src: img.url, alt: "", style: { width: 60, height: 60, objectFit: "cover", borderRadius: 8 } }),
+                          React.createElement("span", { style: { position: "absolute", top: -6, left: -6, background: C.primary, color: "white", borderRadius: 4, padding: "1px 5px", fontSize: 9, fontWeight: 700 } }, "IMG " + (i+1))
                         ),
                         React.createElement("div", { style: { flex: 1, display: "flex", flexDirection: "column", gap: 6 } },
-                          React.createElement("div", null,
-                            React.createElement("div", { style: { fontSize: 9, color: C.muted, textTransform: "uppercase", letterSpacing: 1, marginBottom: 3, fontWeight: 600 } }, "SEO Alt Text"),
-                            React.createElement("input", { value: imageAlts[i] ? imageAlts[i].alt : "", onChange: function(e) { var u = imageAlts.slice(); if (!u[i]) u[i] = { alt: "", title: "" }; u[i] = Object.assign({}, u[i], { alt: e.target.value }); setImageAlts(u); }, style: { width: "100%", background: "white", border: "1.5px solid " + C.border, borderRadius: 7, padding: "7px 10px", fontSize: 12, fontFamily: "Inter,sans-serif", outline: "none" } })
-                          ),
-                          React.createElement("div", null,
-                            React.createElement("div", { style: { fontSize: 9, color: C.muted, textTransform: "uppercase", letterSpacing: 1, marginBottom: 3, fontWeight: 600 } }, "Image Title"),
-                            React.createElement("input", { value: imageAlts[i] ? imageAlts[i].title : "", onChange: function(e) { var u = imageAlts.slice(); if (!u[i]) u[i] = { alt: "", title: "" }; u[i] = Object.assign({}, u[i], { title: e.target.value }); setImageAlts(u); }, style: { width: "100%", background: "white", border: "1.5px solid " + C.border, borderRadius: 7, padding: "7px 10px", fontSize: 12, fontFamily: "Inter,sans-serif", outline: "none" } })
-                          ),
-                          React.createElement("div", { style: { fontSize: 10, color: C.success, fontWeight: 500 } }, "Will auto-upload to website on publish")
+                          React.createElement("input", { value: imageAlts[i] ? imageAlts[i].alt : "", onChange: function(e) { var u = imageAlts.slice(); if (!u[i]) u[i] = { alt: "", title: "" }; u[i] = Object.assign({}, u[i], { alt: e.target.value }); setImageAlts(u); }, style: { width: "100%", background: "white", border: "1.5px solid " + C.border, borderRadius: 7, padding: "7px 10px", fontSize: 12, fontFamily: "Inter,sans-serif", outline: "none" }, placeholder: "SEO Alt Text" }),
+                          React.createElement("input", { value: imageAlts[i] ? imageAlts[i].title : "", onChange: function(e) { var u = imageAlts.slice(); if (!u[i]) u[i] = { alt: "", title: "" }; u[i] = Object.assign({}, u[i], { title: e.target.value }); setImageAlts(u); }, style: { width: "100%", background: "white", border: "1.5px solid " + C.border, borderRadius: 7, padding: "7px 10px", fontSize: 12, fontFamily: "Inter,sans-serif", outline: "none" }, placeholder: "Image Title" })
                         ),
-                        React.createElement("button", { onClick: function() { setUploadedImages(function(p) { return p.filter(function(_, j) { return j !== i; }); }); setImageAlts(function(p) { return p.filter(function(_, j) { return j !== i; }); }); }, style: { background: "#fff1f2", border: "none", borderRadius: 6, padding: "4px 8px", color: C.danger, cursor: "pointer", fontSize: 12 } }, "X")
+                        React.createElement("button", { onClick: function() { setUploadedImages(function(p) { return p.filter(function(_, j) { return j !== i; }); }); setImageAlts(function(p) { return p.filter(function(_, j) { return j !== i; }); }); }, style: { background: "#fff1f2", border: "none", borderRadius: 6, padding: "4px 8px", color: C.danger, cursor: "pointer" } }, "X")
                       );
-                    }),
-                    React.createElement("div", { style: ss.sucbx }, uploadedImages.length + "  image(s) ready - Will auto-upload to WordPress/Shopify!")
+                    })
                   )
                 : React.createElement("div", { style: { display: "flex", flexDirection: "column", gap: 6 } },
                     generated.altTexts.map(function(alt, i) {
-                      return React.createElement("div", { key: i, style: { background: C.bg, border: "1px solid " + C.border, borderRadius: 7, padding: "8px 12px", fontSize: 12, color: C.ink2, display: "flex", alignItems: "flex-start", gap: 8 } },
+                      return React.createElement("div", { key: i, style: { background: C.bg, border: "1px solid " + C.border, borderRadius: 7, padding: "8px 12px", fontSize: 12, display: "flex", gap: 8 } },
                         React.createElement("span", { style: { background: C.primary, color: "white", borderRadius: 4, padding: "2px 7px", fontSize: 10, fontWeight: 700, flexShrink: 0 } }, "IMG " + (i+1)),
-                        React.createElement("div", null,
-                          React.createElement("div", { style: { fontWeight: 500 } }, alt),
-                          React.createElement("div", { style: { fontSize: 10, color: C.muted, marginTop: 1 } }, "Title: " + generated.product + " | " + generated.price)
-                        )
+                        React.createElement("div", null, alt)
                       );
                     })
                   )
@@ -1388,7 +1352,6 @@ export default function App() {
         )
       ),
 
-      // DASHBOARD
       view === "dashboard" && React.createElement("div", null,
         React.createElement("div", { style: { marginBottom: 28 } },
           React.createElement("div", { style: { fontFamily: "Poppins,sans-serif", fontSize: 24, fontWeight: 700 } }, "Dashboard"),
@@ -1415,11 +1378,8 @@ export default function App() {
         )
       ),
 
-      // MY POSTS
       view === "posts" && React.createElement("div", null,
-        React.createElement("div", { style: { marginBottom: 28 } },
-          React.createElement("div", { style: { fontFamily: "Poppins,sans-serif", fontSize: 24, fontWeight: 700 } }, "My Posts")
-        ),
+        React.createElement("div", { style: { marginBottom: 28 } }, React.createElement("div", { style: { fontFamily: "Poppins,sans-serif", fontSize: 24, fontWeight: 700 } }, "My Posts")),
         React.createElement("div", { style: ss.tbl },
           React.createElement("div", { style: Object.assign({}, ss.tblhead, ss.tbl4) }, React.createElement("div", null, "Product"), React.createElement("div", null, "Price"), React.createElement("div", null, "Status"), React.createElement("div", null, "Date")),
           postsLoading ? React.createElement("div", { style: { textAlign: "center", padding: 28, color: C.muted } }, "Loading...") :
@@ -1435,213 +1395,149 @@ export default function App() {
         )
       ),
 
-      // CLIENTS (Admin)
       view === "clients" && isAdmin && React.createElement("div", null,
         React.createElement("div", { style: { marginBottom: 20, display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 12 } },
-          React.createElement("div", null,
-            React.createElement("div", { style: { fontFamily: "Poppins,sans-serif", fontSize: 24, fontWeight: 700 } }, "Clients"),
-            React.createElement("div", { style: { fontSize: 12, color: C.muted, marginTop: 5 } }, "Manage clients - Add, Enable, Disable")
-          ),
+          React.createElement("div", null, React.createElement("div", { style: { fontFamily: "Poppins,sans-serif", fontSize: 24, fontWeight: 700 } }, "Clients")),
           React.createElement(Btn, { variant: "primary", onClick: function() { setShowAddClient(true); } }, "+ Add Client")
         ),
         React.createElement("div", { style: ss.statgrid3 },
-          React.createElement("div", { style: Object.assign({}, ss.statcard, { borderBottom: "3px solid " + C.primary }) },
-            React.createElement("div", { style: ss.statnum }, clients.length),
-            React.createElement("div", { style: ss.statlbl }, "Total Clients")
-          ),
-          React.createElement("div", { style: Object.assign({}, ss.statcard, { borderBottom: "3px solid " + C.success }) },
-            React.createElement("div", { style: ss.statnum }, clients.filter(function(c) { return c.status === "active"; }).length),
-            React.createElement("div", { style: ss.statlbl }, "Active")
-          ),
-          React.createElement("div", { style: Object.assign({}, ss.statcard, { borderBottom: "3px solid " + C.danger }) },
-            React.createElement("div", { style: ss.statnum }, clients.filter(function(c) { return c.status === "disabled"; }).length),
-            React.createElement("div", { style: ss.statlbl }, "Disabled")
-          )
+          React.createElement("div", { style: Object.assign({}, ss.statcard, { borderBottom: "3px solid " + C.primary }) }, React.createElement("div", { style: ss.statnum }, clients.length), React.createElement("div", { style: ss.statlbl }, "Total Clients")),
+          React.createElement("div", { style: Object.assign({}, ss.statcard, { borderBottom: "3px solid " + C.success }) }, React.createElement("div", { style: ss.statnum }, clients.filter(function(c) { return c.status === "active"; }).length), React.createElement("div", { style: ss.statlbl }, "Active")),
+          React.createElement("div", { style: Object.assign({}, ss.statcard, { borderBottom: "3px solid " + C.danger }) }, React.createElement("div", { style: ss.statnum }, clients.filter(function(c) { return c.status === "disabled"; }).length), React.createElement("div", { style: ss.statlbl }, "Disabled"))
         ),
         React.createElement("div", { style: Object.assign({}, ss.infobx, { marginBottom: 16 }) },
           React.createElement("strong", null, "Share this link with client: "),
-          React.createElement("span", { style: { color: C.primary, fontWeight: 600 } }, window.location.origin),
-          React.createElement("br", null),
-          "Client can Sign Up -> Login -> Use their dashboard!"
+          React.createElement("span", { style: { color: C.primary, fontWeight: 600 } }, typeof window !== "undefined" ? window.location.origin : "https://post-rank-ai.vercel.app"),
+          " - Client can Sign Up -> Login -> Use their dashboard!"
         ),
         React.createElement("div", { style: ss.tbl },
           React.createElement("div", { style: Object.assign({}, ss.tblhead, { gridTemplateColumns: "2fr 1fr 1fr 1fr 1.5fr" }) },
-            React.createElement("div", null, "Client"),
-            React.createElement("div", null, "Plan"),
-            React.createElement("div", null, "Joined"),
-            React.createElement("div", null, "Status"),
-            React.createElement("div", null, "Actions")
+            React.createElement("div", null, "Client"), React.createElement("div", null, "Plan"), React.createElement("div", null, "Joined"), React.createElement("div", null, "Status"), React.createElement("div", null, "Actions")
           ),
-          clientsLoading
-            ? React.createElement("div", { style: { textAlign: "center", padding: 28, color: C.muted } }, "Loading clients...")
-            : clients.length === 0
-              ? React.createElement("div", { style: { textAlign: "center", padding: 28, color: C.muted } },
-                  React.createElement("div", { style: { fontSize: 28, marginBottom: 8 } }, "C"),
-                  React.createElement("div", null, "No clients yet. Click Add Client to get started!"))
-              : clients.map(function(c) {
-                  var isActive = c.status === "active";
-                  return React.createElement("div", { key: c.id, style: Object.assign({}, ss.tblrow, { gridTemplateColumns: "2fr 1fr 1fr 1fr 1.5fr" }) },
-                    React.createElement("div", null,
-                      React.createElement("div", { style: { fontWeight: 600, color: C.ink } }, c.name || c.email.split("@")[0]),
-                      React.createElement("div", { style: { fontSize: 11, color: C.muted } }, c.email)
-                    ),
-                    React.createElement("div", null,
-                      React.createElement("span", { style: { background: c.plan === "Agency" ? "#fef3c7" : c.plan === "Pro" ? "#dbeafe" : "#f1f5f9", color: c.plan === "Agency" ? "#d97706" : c.plan === "Pro" ? "#2563eb" : "#475569", fontSize: 10, fontWeight: 600, padding: "3px 8px", borderRadius: 4 } }, c.plan || "Basic")
-                    ),
-                    React.createElement("div", { style: { fontSize: 11, color: C.muted } }, c.created_at ? new Date(c.created_at).toLocaleDateString() : "-"),
-                    React.createElement(Badge, { type: isActive ? "active" : "disabled" }, isActive ? "Active" : "Disabled"),
-                    React.createElement("div", { style: { display: "flex", gap: 5, flexWrap: "wrap" } },
-                      React.createElement("button", {
-                        onClick: function() { handleToggleClient(c); },
-                        style: { border: "none", borderRadius: 6, padding: "5px 10px", fontSize: 11, fontFamily: "Inter,sans-serif", cursor: "pointer", fontWeight: 600, background: isActive ? "#fee2e2" : "#dcfce7", color: isActive ? "#dc2626" : "#16a34a" }
-                      }, isActive ? "Disable" : "Enable"),
-                      React.createElement("button", {
-                        onClick: function() { setEditClient(Object.assign({}, c)); setShowEditModal(true); },
-                        style: { border: "none", borderRadius: 6, padding: "5px 10px", fontSize: 11, fontFamily: "Inter,sans-serif", cursor: "pointer", fontWeight: 600, background: "#dbeafe", color: "#2563eb" }
-                      }, "Edit"),
-                      React.createElement("button", {
-                        onClick: function() {
-                          var newPlan = window.prompt("Select plan:\n1. Basic (50 credits)\n2. Pro (250 credits)\n3. Agency (1500 credits)\n4. AgencyUnlimited (Unlimited)\n\nType exactly: Basic, Pro, Agency, or AgencyUnlimited", c.plan || "Basic");
-                          if (newPlan && ["Basic","Pro","Agency","AgencyUnlimited"].indexOf(newPlan) !== -1) {
-                            var limit = PLAN_LIMITS[newPlan] || 50;
-                            var isUnlim = newPlan === "AgencyUnlimited";
-                            dbAPI.update("clients", "id=eq." + c.id, { plan: newPlan }, SUPA_KEY).catch(function(){});
-                            fetch(SUPA_URL + "/rest/v1/credits?user_id=eq." + (c.user_id || c.id), {
-                              method: "PATCH",
-                              headers: { apikey: SUPA_KEY, Authorization: "Bearer " + SUPA_KEY, "Content-Type": "application/json" },
-                              body: JSON.stringify({ plan: newPlan, total_credits: limit, is_unlimited: isUnlim })
-                            }).catch(function(){});
-                            setClients(function(prev) { return prev.map(function(x) { return x.id === c.id ? Object.assign({}, x, { plan: newPlan }) : x; }); });
-                            notify("Plan updated to: " + newPlan);
-                          }
-                        },
-                        style: { border: "none", borderRadius: 6, padding: "5px 10px", fontSize: 11, fontFamily: "Inter,sans-serif", cursor: "pointer", fontWeight: 600, background: "#fef3c7", color: "#d97706" }
-                      }, "Plan"),
-                      React.createElement("button", {
-                        onClick: function() { handleDeleteeteClient(c.id); },
-                        style: { border: "none", borderRadius: 6, padding: "5px 10px", fontSize: 11, fontFamily: "Inter,sans-serif", cursor: "pointer", fontWeight: 600, background: "#fee2e2", color: "#dc2626" }
-                      }, "Delete")
-                    )
-                  );
-                })
-        )
-      ),
-
-      // SETTINGS (Client)
-      view === "settings" && !isAdmin && React.createElement(SettingsView, { C: C, ss: ss, Input: Input, Btn: Btn, notify: notify, session: session, SUPA_URL: SUPA_URL, SUPA_KEY: SUPA_KEY }),
-
-      // ADMIN
-      view === "admin" && isAdmin && React.createElement("div", null,
-        React.createElement("div", { style: { marginBottom: 28 } },
-          React.createElement("div", { style: { fontFamily: "Poppins,sans-serif", fontSize: 24, fontWeight: 700 } }, "Admin Panel")
-        ),
-        React.createElement("div", { style: ss.statgrid4 },
-          React.createElement("div", { style: Object.assign({}, ss.statcard, { borderBottom: "3px solid " + C.primary }) }, React.createElement("div", { style: ss.statnum }, posts.length), React.createElement("div", { style: ss.statlbl }, "Total Posts")),
-          React.createElement("div", { style: Object.assign({}, ss.statcard, { borderBottom: "3px solid " + C.success }) }, React.createElement("div", { style: ss.statnum }, totalPub), React.createElement("div", { style: ss.statlbl }, "Published")),
-          React.createElement("div", { style: Object.assign({}, ss.statcard, { borderBottom: "3px solid " + C.warning }) }, React.createElement("div", { style: ss.statnum }, "3"), React.createElement("div", { style: ss.statlbl }, "Active Clients")),
-          React.createElement("div", { style: Object.assign({}, ss.statcard, { borderBottom: "3px solid " + C.danger }) }, React.createElement("div", { style: { fontFamily: "Poppins,sans-serif", fontSize: 24, fontWeight: 700, color: C.primary } }, "$2,340"), React.createElement("div", { style: ss.statlbl }, "Monthly Revenue"))
-        )
-      ),
-
-      // INVOICES
-      view === "invoices" && isAdmin && React.createElement("div", null,
-        // Header
-        React.createElement("div", { style: { marginBottom: 20, display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 12 } },
-          React.createElement("div", null,
-            React.createElement("div", { style: { fontFamily: "Poppins,sans-serif", fontSize: 24, fontWeight: 700 } }, "Invoices"),
-            React.createElement("div", { style: { fontSize: 12, color: C.muted, marginTop: 5 } }, "Create, send & track client invoices")
-          ),
-          React.createElement(Btn, { variant: "primary", onClick: function() { setShowInvoiceModal(true); } }, "+ New Invoice")
-        ),
-
-        // Revenue Stats
-        React.createElement("div", { style: ss.statgrid4 },
-          React.createElement("div", { style: Object.assign({}, ss.statcard, { borderBottom: "3px solid " + C.success }) },
-            React.createElement("div", { style: Object.assign({}, ss.statnum, { color: C.success }) },
-              formatPKR(invoices.filter(function(i) { return i.status === "paid"; }).reduce(function(s, i) { return s + calcTotal(i.services); }, 0))
-            ),
-            React.createElement("div", { style: ss.statlbl }, "Total Received")
-          ),
-          React.createElement("div", { style: Object.assign({}, ss.statcard, { borderBottom: "3px solid " + C.warning }) },
-            React.createElement("div", { style: Object.assign({}, ss.statnum, { color: C.warning }) },
-              formatPKR(invoices.filter(function(i) { return i.status === "pending"; }).reduce(function(s, i) { return s + calcTotal(i.services); }, 0))
-            ),
-            React.createElement("div", { style: ss.statlbl }, "Pending")
-          ),
-          React.createElement("div", { style: Object.assign({}, ss.statcard, { borderBottom: "3px solid " + C.danger }) },
-            React.createElement("div", { style: Object.assign({}, ss.statnum, { color: C.danger }) },
-              formatPKR(invoices.filter(function(i) { return i.status === "overdue"; }).reduce(function(s, i) { return s + calcTotal(i.services); }, 0))
-            ),
-            React.createElement("div", { style: ss.statlbl }, "Overdue")
-          ),
-          React.createElement("div", { style: Object.assign({}, ss.statcard, { borderBottom: "3px solid " + C.primary }) },
-            React.createElement("div", { style: ss.statnum }, invoices.length),
-            React.createElement("div", { style: ss.statlbl }, "Total Invoices")
-          )
-        ),
-
-        // Invoice Table
-        React.createElement("div", { style: ss.tbl },
-          React.createElement("div", { style: Object.assign({}, ss.tblhead, { gridTemplateColumns: "1fr 1.5fr 1fr 1fr 1fr 2fr" }) },
-            React.createElement("div", null, "Invoice #"),
-            React.createElement("div", null, "Customer"),
-            React.createElement("div", null, "Amount"),
-            React.createElement("div", null, "Due Date"),
-            React.createElement("div", null, "Status"),
-            React.createElement("div", null, "Actions")
-          ),
-          invoices.map(function(inv) {
-            var total = calcTotal(inv.services);
-            var statusColors = { paid: { bg: "#dcfce7", color: "#16a34a" }, pending: { bg: "#fef9c3", color: "#ca8a04" }, overdue: { bg: "#fee2e2", color: "#dc2626" } };
-            var sc = statusColors[inv.status] || statusColors.pending;
-            return React.createElement("div", { key: inv.id, style: Object.assign({}, ss.tblrow, { gridTemplateColumns: "1fr 1.5fr 1fr 1fr 1fr 2fr" }) },
-              React.createElement("div", { style: { fontWeight: 700, color: C.primary, fontSize: 12 } }, inv.invoiceNo),
-              React.createElement("div", null,
-                React.createElement("div", { style: { fontWeight: 600, fontSize: 13 } }, inv.customer.name),
-                React.createElement("div", { style: { fontSize: 11, color: C.muted } }, inv.customer.company || inv.customer.phone)
-              ),
-              React.createElement("div", { style: { fontWeight: 700, color: C.ink, fontSize: 13 } }, formatPKR(total)),
-              React.createElement("div", { style: { fontSize: 12, color: C.muted } }, inv.dueDate || "-"),
-              React.createElement("div", null,
-                React.createElement("select", {
-                  value: inv.status,
-                  onChange: function(e) { handleStatusChange(inv.id, e.target.value); },
-                  style: { background: sc.bg, color: sc.color, border: "none", borderRadius: 6, padding: "4px 8px", fontSize: 11, fontWeight: 700, cursor: "pointer", outline: "none" }
-                },
-                  React.createElement("option", { value: "paid" }, "Paid"),
-                  React.createElement("option", { value: "pending" }, "Pending"),
-                  React.createElement("option", { value: "overdue" }, "Overdue")
-                )
-              ),
+          clientsLoading ? React.createElement("div", { style: { textAlign: "center", padding: 28, color: C.muted } }, "Loading clients...") :
+          clients.length === 0 ? React.createElement("div", { style: { textAlign: "center", padding: 28, color: C.muted } }, "No clients yet. Click Add Client to get started!") :
+          clients.map(function(c) {
+            var isActive = c.status === "active";
+            return React.createElement("div", { key: c.id, style: Object.assign({}, ss.tblrow, { gridTemplateColumns: "2fr 1fr 1fr 1fr 1.5fr" }) },
+              React.createElement("div", null, React.createElement("div", { style: { fontWeight: 600 } }, c.name || c.email), React.createElement("div", { style: { fontSize: 11, color: C.muted } }, c.email)),
+              React.createElement("div", null, React.createElement(Badge, { type: c.plan || "Basic" }, c.plan || "Basic")),
+              React.createElement("div", { style: { fontSize: 11, color: C.muted } }, c.created_at ? new Date(c.created_at).toLocaleDateString() : "-"),
+              React.createElement(Badge, { type: isActive ? "active" : "disabled" }, isActive ? "Active" : "Disabled"),
               React.createElement("div", { style: { display: "flex", gap: 5, flexWrap: "wrap" } },
-                React.createElement("button", { onClick: function() { downloadInvoicePDF(inv); }, style: { border: "none", borderRadius: 6, padding: "5px 10px", fontSize: 11, cursor: "pointer", fontWeight: 600, background: C.primaryLight, color: C.primary } }, "PDF"),
-                React.createElement("button", { onClick: function() { printInvoice(inv); }, style: { border: "none", borderRadius: 6, padding: "5px 10px", fontSize: 11, cursor: "pointer", fontWeight: 600, background: "#f3f4f6", color: "#374151" } }, "Print"),
-                React.createElement("button", { onClick: function() { sendWhatsApp(inv, false); }, style: { border: "none", borderRadius: 6, padding: "5px 10px", fontSize: 11, cursor: "pointer", fontWeight: 600, background: "#dcfce7", color: "#16a34a" } }, "WA Send"),
-                inv.status !== "paid" ? React.createElement("button", { onClick: function() { sendWhatsApp(inv, true); }, style: { border: "none", borderRadius: 6, padding: "5px 10px", fontSize: 11, cursor: "pointer", fontWeight: 600, background: "#fef9c3", color: "#ca8a04" } }, "Reminder") : null,
-                React.createElement("button", { onClick: function() { handleDeleteeteInvoice(inv.id); }, style: { border: "none", borderRadius: 6, padding: "5px 10px", fontSize: 11, cursor: "pointer", fontWeight: 600, background: "#fee2e2", color: "#dc2626" } }, "Delete")
+                React.createElement("button", { onClick: function() { handleToggleStatus(c.id); }, style: { border: "none", borderRadius: 6, padding: "5px 10px", fontSize: 11, cursor: "pointer", fontWeight: 600, background: isActive ? "#fee2e2" : "#dcfce7", color: isActive ? "#dc2626" : "#16a34a" } }, isActive ? "Disable" : "Enable"),
+                React.createElement("button", { onClick: function() { setEditClient(Object.assign({}, c)); setShowEditModal(true); }, style: { border: "none", borderRadius: 6, padding: "5px 10px", fontSize: 11, cursor: "pointer", fontWeight: 600, background: "#dbeafe", color: "#2563eb" } }, "Edit"),
+                React.createElement("button", { onClick: function() {
+                  var np = window.prompt("Select plan:\n1. Basic (50 credits)\n2. Pro (250 credits)\n3. Agency (1500 credits)\n4. AgencyUnlimited (Unlimited)\n\nType exactly: Basic, Pro, Agency, or AgencyUnlimited", c.plan || "Basic");
+                  if (np && ["Basic","Pro","Agency","AgencyUnlimited"].indexOf(np) !== -1) {
+                    dbAPI.update("clients", "id=eq." + c.id, { plan: np }, SUPA_KEY).catch(function(){});
+                    setClients(function(prev) { return prev.map(function(x) { return x.id === c.id ? Object.assign({}, x, { plan: np }) : x; }); });
+                    notify("Plan updated to: " + np);
+                  }
+                }, style: { border: "none", borderRadius: 6, padding: "5px 10px", fontSize: 11, cursor: "pointer", fontWeight: 600, background: "#fef3c7", color: "#d97706" } }, "Plan"),
+                React.createElement("button", { onClick: function() { handleDeleteClient(c.id); }, style: { border: "none", borderRadius: 6, padding: "5px 10px", fontSize: 11, cursor: "pointer", fontWeight: 600, background: "#fee2e2", color: "#dc2626" } }, "Delete")
               )
             );
           })
         )
       ),
 
-      // PLANS
-      view === "plans" && React.createElement("div", null,
-        React.createElement("div", { style: { marginBottom: 28 } },
-          React.createElement("div", { style: { fontFamily: "Poppins,sans-serif", fontSize: 24, fontWeight: 700 } }, "Plans"),
-          React.createElement("div", { style: { fontSize: 12, color: C.muted, marginTop: 5 } }, "Simple monthly billing. Cancel anytime.")
+      view === "invoices" && isAdmin && React.createElement("div", null,
+        React.createElement("div", { style: { marginBottom: 20, display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 12 } },
+          React.createElement("div", null, React.createElement("div", { style: { fontFamily: "Poppins,sans-serif", fontSize: 24, fontWeight: 700 } }, "Invoices"), React.createElement("div", { style: { fontSize: 12, color: C.muted, marginTop: 5 } }, "Create, send & track client invoices")),
+          React.createElement(Btn, { variant: "primary", onClick: function() { setShowInvoiceModal(true); } }, "+ New Invoice")
         ),
+        React.createElement("div", { style: { background: C.card, border: "1px solid " + C.border, borderRadius: 12, padding: 20, marginBottom: 20 } },
+          React.createElement("div", { style: { display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 12 } },
+            React.createElement("div", null,
+              React.createElement("div", { style: { fontFamily: "Poppins,sans-serif", fontSize: 14, fontWeight: 700 } }, "Company Letterhead"),
+              React.createElement("div", { style: { fontSize: 12, color: C.muted, marginTop: 3 } }, "Upload letterhead - appears on all invoice PDFs automatically")
+            ),
+            React.createElement("div", { style: { display: "flex", gap: 10, alignItems: "center" } },
+              letterhead ? React.createElement("div", { style: { display: "flex", gap: 8, alignItems: "center" } },
+                React.createElement("img", { src: letterhead, alt: "Letterhead", style: { height: 50, borderRadius: 6, border: "1px solid " + C.border } }),
+                React.createElement("button", { onClick: function() { setLetterhead(null); localStorage.removeItem("pr_letterhead"); notify("Letterhead removed."); }, style: { background: "#fee2e2", border: "none", borderRadius: 7, padding: "6px 12px", color: "#dc2626", fontSize: 12, fontWeight: 600, cursor: "pointer" } }, "Remove")
+              ) : React.createElement("span", { style: { fontSize: 12, color: C.muted, fontStyle: "italic" } }, "No letterhead uploaded"),
+              React.createElement("div", null,
+                React.createElement("input", { type: "file", accept: "image/*", id: "lh-upload", style: { display: "none" },
+                  onChange: function(e) {
+                    var file = e.target.files[0];
+                    if (!file) return;
+                    if (file.size > 2 * 1024 * 1024) { notify("File too large! Max 2MB.", true); return; }
+                    var reader = new FileReader();
+                    reader.onload = function(ev) { setLetterhead(ev.target.result); localStorage.setItem("pr_letterhead", ev.target.result); notify("Letterhead uploaded successfully!"); };
+                    reader.readAsDataURL(file);
+                  }
+                }),
+                React.createElement("label", { htmlFor: "lh-upload", style: { background: C.primary, color: "white", borderRadius: 8, padding: "9px 16px", fontSize: 12, fontWeight: 600, cursor: "pointer", display: "inline-block" } }, letterhead ? "Change Letterhead" : "Upload Letterhead")
+              )
+            )
+          ),
+          letterhead
+            ? React.createElement("div", { style: { marginTop: 12, padding: 10, background: "#f0fdf4", border: "1px solid #86efac", borderRadius: 8, fontSize: 11, color: "#166534" } }, "Letterhead is active - all invoice PDFs will include your letterhead.")
+            : React.createElement("div", { style: { marginTop: 12, padding: 10, background: "#fef9c3", border: "1px solid #fde68a", borderRadius: 8, fontSize: 11, color: "#78350f" } }, "Tip: Upload PNG/JPG letterhead (recommended 1200x300px, max 2MB)")
+        ),
+        React.createElement("div", { style: ss.statgrid4 },
+          React.createElement("div", { style: Object.assign({}, ss.statcard, { borderBottom: "3px solid " + C.success }) }, React.createElement("div", { style: Object.assign({}, ss.statnum, { color: C.success }) }, formatPKR(invoices.filter(function(i) { return i.status === "paid"; }).reduce(function(s, i) { return s + calcTotal(i.services); }, 0))), React.createElement("div", { style: ss.statlbl }, "Total Received")),
+          React.createElement("div", { style: Object.assign({}, ss.statcard, { borderBottom: "3px solid " + C.warning }) }, React.createElement("div", { style: Object.assign({}, ss.statnum, { color: C.warning }) }, formatPKR(invoices.filter(function(i) { return i.status === "pending"; }).reduce(function(s, i) { return s + calcTotal(i.services); }, 0))), React.createElement("div", { style: ss.statlbl }, "Pending")),
+          React.createElement("div", { style: Object.assign({}, ss.statcard, { borderBottom: "3px solid " + C.danger }) }, React.createElement("div", { style: Object.assign({}, ss.statnum, { color: C.danger }) }, formatPKR(invoices.filter(function(i) { return i.status === "overdue"; }).reduce(function(s, i) { return s + calcTotal(i.services); }, 0))), React.createElement("div", { style: ss.statlbl }, "Overdue")),
+          React.createElement("div", { style: Object.assign({}, ss.statcard, { borderBottom: "3px solid " + C.primary }) }, React.createElement("div", { style: ss.statnum }, invoices.length), React.createElement("div", { style: ss.statlbl }, "Total Invoices"))
+        ),
+        React.createElement("div", { style: ss.tbl },
+          React.createElement("div", { style: Object.assign({}, ss.tblhead, { gridTemplateColumns: "1fr 1.5fr 1fr 1fr 1fr 2fr" }) },
+            React.createElement("div", null, "Invoice #"), React.createElement("div", null, "Customer"), React.createElement("div", null, "Amount"), React.createElement("div", null, "Due Date"), React.createElement("div", null, "Status"), React.createElement("div", null, "Actions")
+          ),
+          invoices.map(function(inv) {
+            var total = calcTotal(inv.services);
+            var sc = { paid: { bg: "#dcfce7", color: "#16a34a" }, pending: { bg: "#fef9c3", color: "#ca8a04" }, overdue: { bg: "#fee2e2", color: "#dc2626" } }[inv.status] || { bg: "#fef9c3", color: "#ca8a04" };
+            return React.createElement("div", { key: inv.id, style: Object.assign({}, ss.tblrow, { gridTemplateColumns: "1fr 1.5fr 1fr 1fr 1fr 2fr" }) },
+              React.createElement("div", { style: { fontWeight: 700, color: C.primary, fontSize: 12 } }, inv.invoiceNo),
+              React.createElement("div", null, React.createElement("div", { style: { fontWeight: 600 } }, inv.customer.name), React.createElement("div", { style: { fontSize: 11, color: C.muted } }, inv.customer.company || inv.customer.phone)),
+              React.createElement("div", { style: { fontWeight: 700 } }, formatPKR(total)),
+              React.createElement("div", { style: { fontSize: 12, color: C.muted } }, inv.dueDate || "-"),
+              React.createElement("select", { value: inv.status, onChange: function(e) { handleStatusChange(inv.id, e.target.value); }, style: { background: sc.bg, color: sc.color, border: "none", borderRadius: 6, padding: "4px 8px", fontSize: 11, fontWeight: 700, cursor: "pointer", outline: "none" } },
+                React.createElement("option", { value: "paid" }, "Paid"),
+                React.createElement("option", { value: "pending" }, "Pending"),
+                React.createElement("option", { value: "overdue" }, "Overdue")
+              ),
+              React.createElement("div", { style: { display: "flex", gap: 5, flexWrap: "wrap" } },
+                React.createElement("button", { onClick: function() { downloadInvoicePDF(inv); }, style: { border: "none", borderRadius: 6, padding: "5px 10px", fontSize: 11, cursor: "pointer", fontWeight: 600, background: "#eef2ff", color: C.primary } }, "PDF"),
+                React.createElement("button", { onClick: function() { printInvoice(inv); }, style: { border: "none", borderRadius: 6, padding: "5px 10px", fontSize: 11, cursor: "pointer", fontWeight: 600, background: "#f3f4f6", color: "#374151" } }, "Print"),
+                React.createElement("button", { onClick: function() { sendWhatsApp(inv, false); }, style: { border: "none", borderRadius: 6, padding: "5px 10px", fontSize: 11, cursor: "pointer", fontWeight: 600, background: "#dcfce7", color: "#16a34a" } }, "WA Send"),
+                inv.status !== "paid" ? React.createElement("button", { onClick: function() { sendWhatsApp(inv, true); }, style: { border: "none", borderRadius: 6, padding: "5px 10px", fontSize: 11, cursor: "pointer", fontWeight: 600, background: "#fef9c3", color: "#ca8a04" } }, "Reminder") : null,
+                React.createElement("button", { onClick: function() { handleDeleteInvoice(inv.id); }, style: { border: "none", borderRadius: 6, padding: "5px 10px", fontSize: 11, cursor: "pointer", fontWeight: 600, background: "#fee2e2", color: "#dc2626" } }, "Delete")
+              )
+            );
+          })
+        )
+      ),
+
+      view === "settings" && !isAdmin && React.createElement(SettingsView, { C: C, ss: ss, Input: Input, Btn: Btn, notify: notify }),
+
+      view === "admin" && isAdmin && React.createElement("div", null,
+        React.createElement("div", { style: { marginBottom: 28 } }, React.createElement("div", { style: { fontFamily: "Poppins,sans-serif", fontSize: 24, fontWeight: 700 } }, "Admin Panel")),
+        React.createElement("div", { style: ss.statgrid4 },
+          React.createElement("div", { style: Object.assign({}, ss.statcard, { borderBottom: "3px solid " + C.primary }) }, React.createElement("div", { style: ss.statnum }, posts.length), React.createElement("div", { style: ss.statlbl }, "Total Posts")),
+          React.createElement("div", { style: Object.assign({}, ss.statcard, { borderBottom: "3px solid " + C.success }) }, React.createElement("div", { style: ss.statnum }, totalPub), React.createElement("div", { style: ss.statlbl }, "Published")),
+          React.createElement("div", { style: Object.assign({}, ss.statcard, { borderBottom: "3px solid " + C.warning }) }, React.createElement("div", { style: ss.statnum }, clients.length), React.createElement("div", { style: ss.statlbl }, "Active Clients")),
+          React.createElement("div", { style: Object.assign({}, ss.statcard, { borderBottom: "3px solid " + C.danger }) }, React.createElement("div", { style: { fontFamily: "Poppins,sans-serif", fontSize: 24, fontWeight: 700, color: C.primary } }, "PKR " + formatPKR(invoices.filter(function(i) { return i.status === "paid"; }).reduce(function(s, i) { return s + calcTotal(i.services); }, 0))), React.createElement("div", { style: ss.statlbl }, "Monthly Revenue"))
+        )
+      ),
+
+      view === "plans" && React.createElement("div", null,
+        React.createElement("div", { style: { marginBottom: 28 } }, React.createElement("div", { style: { fontFamily: "Poppins,sans-serif", fontSize: 24, fontWeight: 700 } }, "Plans"), React.createElement("div", { style: { fontSize: 12, color: C.muted, marginTop: 5 } }, "Simple monthly billing. Cancel anytime.")),
         React.createElement("div", { style: ss.plansgrid },
-          [{ name: "Basic", price: "$19", feats: ["100 posts/month","SEO optimization","1 website","Email support"], featured: false },
-           { name: "Pro", price: "$49", feats: ["500 posts/month","Advanced SEO","5 websites","Priority support","Analytics"], featured: true },
-           { name: "Agency", price: "$149", feats: ["Unlimited posts","Full SEO suite","Unlimited websites","Dedicated support","White-label","API access"], featured: false }
+          [
+            { name: "Basic", price: "$19", credits: "50 credits/month", feats: ["50 posts/month", "Local & International SEO", "1 website", "Email support", "Basic analytics"], featured: false },
+            { name: "Pro", price: "$49", credits: "250 credits/month", feats: ["250 posts/month", "Advanced SEO optimization", "5 websites", "Priority support", "Full analytics", "WordPress & Shopify"], featured: true },
+            { name: "Agency", price: "$149", credits: "1500 or Unlimited", feats: ["1500 or Unlimited posts", "Full SEO suite", "Unlimited websites", "Dedicated support", "White-label option", "API access", "Custom letterhead"], featured: false },
           ].map(function(p) {
             return React.createElement("div", { key: p.name, style: Object.assign({}, ss.plancard, p.featured ? { background: "#1e293b", borderColor: C.primary } : {}) },
               p.featured ? React.createElement("div", { style: { position: "absolute", top: -11, left: "50%", transform: "translateX(-50%)", background: C.primary, color: "white", fontSize: 9, fontWeight: 700, padding: "4px 14px", borderRadius: 20, whiteSpace: "nowrap" } }, "Most Popular") : null,
-              React.createElement("div", { style: { fontFamily: "Poppins,sans-serif", fontSize: 15, fontWeight: 700, marginBottom: 8, color: p.featured ? "#a5b4fc" : C.ink } }, p.name),
-              React.createElement("div", { style: { fontFamily: "Poppins,sans-serif", fontSize: 32, fontWeight: 700, color: p.featured ? "#f1f5f9" : C.ink } }, p.price, React.createElement("span", { style: { fontSize: 12, color: C.muted } }, "/mo")),
-              React.createElement("ul", { style: { margin: "18px 0", listStyle: "none" } },
-                p.feats.map(function(f) { return React.createElement("li", { key: f, style: { fontSize: 12, padding: "5px 0", borderBottom: "1px solid " + (p.featured ? "#334155" : C.border), display: "flex", alignItems: "center", gap: 7, color: p.featured ? "#94a3b8" : C.ink2 } }, React.createElement("span", { style: { color: C.primary } }, "OK"), f); })
+              React.createElement("div", { style: { fontFamily: "Poppins,sans-serif", fontSize: 15, fontWeight: 700, marginBottom: 4, color: p.featured ? "#a5b4fc" : C.ink } }, p.name),
+              React.createElement("div", { style: { fontFamily: "Poppins,sans-serif", fontSize: 30, fontWeight: 700, color: p.featured ? "#f1f5f9" : C.ink } }, p.price, React.createElement("span", { style: { fontSize: 12, color: C.muted } }, "/mo")),
+              React.createElement("div", { style: { fontSize: 12, color: C.primary, fontWeight: 600, marginBottom: 12, marginTop: 4 } }, p.credits),
+              React.createElement("ul", { style: { margin: "0 0 16px", listStyle: "none" } },
+                p.feats.map(function(f) { return React.createElement("li", { key: f, style: { fontSize: 12, padding: "5px 0", borderBottom: "1px solid " + (p.featured ? "#334155" : C.border), display: "flex", alignItems: "center", gap: 7, color: p.featured ? "#94a3b8" : C.ink2 } }, React.createElement("span", { style: { color: C.primary } }, "v"), f); })
               ),
               React.createElement("button", { style: { width: "100%", padding: 12, borderRadius: 10, border: "2px solid " + C.primary, background: p.featured ? C.primary : "transparent", color: p.featured ? "white" : C.primary, fontFamily: "Poppins,sans-serif", fontSize: 13, fontWeight: 600, cursor: "pointer" } }, p.name === (profile.plan || "Basic") ? "Current Plan" : "Get Started")
             );
@@ -1650,72 +1546,40 @@ export default function App() {
       )
     ),
 
-    // NEW INVOICE MODAL
-    showInvoiceModal && React.createElement("div", { style: ss.overlay, onClick: function(e) { if (e.target === e.currentTarget) setShowInvoiceModal(false); } },
-      React.createElement("div", { style: Object.assign({}, ss.modal, { maxWidth: 560, maxHeight: "90vh", overflowY: "auto" }) },
-        React.createElement("div", { style: { fontFamily: "Poppins,sans-serif", fontSize: 18, fontWeight: 700, marginBottom: 20 } }, "Create New Invoice"),
-
-        React.createElement("div", { style: { fontFamily: "Poppins,sans-serif", fontSize: 13, fontWeight: 600, color: C.primary, marginBottom: 12 } }, "Customer Details"),
-        React.createElement("div", { style: { display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 16 } },
-          React.createElement("div", null, React.createElement("label", { style: ss.fmlabel }, "Customer Full Name *"), React.createElement(Input, { placeholder: "Ali Khan", value: newInvoice.customer.name, onChange: function(e) { setNewInvoice(function(p) { return Object.assign({}, p, { customer: Object.assign({}, p.customer, { name: e.target.value }) }); }); } })),
-          React.createElement("div", null, React.createElement("label", { style: ss.fmlabel }, "Phone Number"), React.createElement(Input, { placeholder: "+92-300-0000000", value: newInvoice.customer.phone, onChange: function(e) { setNewInvoice(function(p) { return Object.assign({}, p, { customer: Object.assign({}, p.customer, { phone: e.target.value }) }); }); } })),
-          React.createElement("div", null, React.createElement("label", { style: ss.fmlabel }, "Company Name"), React.createElement(Input, { placeholder: "Company Name Name", value: newInvoice.customer.company, onChange: function(e) { setNewInvoice(function(p) { return Object.assign({}, p, { customer: Object.assign({}, p.customer, { company: e.target.value }) }); }); } })),
-          React.createElement("div", null, React.createElement("label", { style: ss.fmlabel }, "WhatsApp Number"), React.createElement(Input, { placeholder: "923001234567", value: newInvoice.customer.whatsapp, onChange: function(e) { setNewInvoice(function(p) { return Object.assign({}, p, { customer: Object.assign({}, p.customer, { whatsapp: e.target.value }) }); }); } }))
-        ),
-
-        React.createElement("div", { style: { fontFamily: "Poppins,sans-serif", fontSize: 13, fontWeight: 600, color: C.primary, marginBottom: 12 } }, "Services"),
-        newInvoice.services.map(function(s, i) {
-          return React.createElement("div", { key: i, style: { display: "grid", gridTemplateColumns: "2fr 1fr 1fr auto", gap: 8, marginBottom: 8, alignItems: "center" } },
-            React.createElement(Input, { placeholder: "Service name", value: s.name, onChange: function(e) { var sv = newInvoice.services.slice(); sv[i] = Object.assign({}, sv[i], { name: e.target.value }); setNewInvoice(function(p) { return Object.assign({}, p, { services: sv }); }); } }),
-            React.createElement(Input, { placeholder: "Qty", value: s.qty, onChange: function(e) { var sv = newInvoice.services.slice(); sv[i] = Object.assign({}, sv[i], { qty: parseInt(e.target.value) || 1 }); setNewInvoice(function(p) { return Object.assign({}, p, { services: sv }); }); } }),
-            React.createElement(Input, { placeholder: "Price (PKR)", value: s.price, onChange: function(e) { var sv = newInvoice.services.slice(); sv[i] = Object.assign({}, sv[i], { price: parseInt(e.target.value) || 0 }); setNewInvoice(function(p) { return Object.assign({}, p, { services: sv }); }); } }),
-            React.createElement("button", { onClick: function() { var sv = newInvoice.services.filter(function(_, j) { return j !== i; }); setNewInvoice(function(p) { return Object.assign({}, p, { services: sv }); }); }, style: { background: "#fee2e2", border: "none", borderRadius: 6, padding: "8px 10px", color: "#dc2626", cursor: "pointer", fontWeight: 700 } }, "X")
-          );
-        }),
-        React.createElement("button", { onClick: function() { setNewInvoice(function(p) { return Object.assign({}, p, { services: p.services.concat([{ name: "", qty: 1, price: 0 }]) }); }); }, style: { background: C.primaryLight, border: "none", borderRadius: 8, padding: "8px 16px", color: C.primary, cursor: "pointer", fontSize: 12, fontWeight: 600, marginBottom: 16 } }, "+ Add Service"),
-
-        React.createElement("div", { style: { background: C.bg, border: "1px solid " + C.border, borderRadius: 8, padding: "12px 16px", marginBottom: 16, textAlign: "right" } },
-          React.createElement("div", { style: { fontFamily: "Poppins,sans-serif", fontSize: 18, fontWeight: 700, color: C.primary } },
-            "Total: " + formatPKR(calcTotal(newInvoice.services))
+    showAddClient && React.createElement("div", { style: ss.overlay, onClick: function(e) { if (e.target === e.currentTarget) setShowAddClient(false); } },
+      React.createElement("div", { style: ss.modal },
+        React.createElement("div", { style: { fontFamily: "Poppins,sans-serif", fontSize: 18, fontWeight: 700, marginBottom: 20 } }, "Add New Client"),
+        React.createElement("div", { style: Object.assign({}, ss.infobx, { marginBottom: 16 }) }, "Create client account. Client will verify email and login."),
+        React.createElement("div", { style: ss.fmgroup }, React.createElement("label", { style: ss.fmlabel }, "Full Name *"), React.createElement(Input, { placeholder: "Ali Store", value: newClient.name, onChange: function(e) { setNewClient(function(c) { return Object.assign({}, c, { name: e.target.value }); }); } })),
+        React.createElement("div", { style: ss.fmgroup }, React.createElement("label", { style: ss.fmlabel }, "Email *"), React.createElement(Input, { type: "email", placeholder: "client@email.com", value: newClient.email, onChange: function(e) { setNewClient(function(c) { return Object.assign({}, c, { email: e.target.value }); }); } })),
+        React.createElement("div", { style: ss.fmgroup }, React.createElement("label", { style: ss.fmlabel }, "Password *"), React.createElement(Input, { type: "password", placeholder: "Min 6 characters", value: newClient.password, onChange: function(e) { setNewClient(function(c) { return Object.assign({}, c, { password: e.target.value }); }); } })),
+        React.createElement("div", { style: ss.fmgroup }, React.createElement("label", { style: ss.fmlabel }, "Plan"),
+          React.createElement("select", { value: newClient.plan, onChange: function(e) { setNewClient(function(c) { return Object.assign({}, c, { plan: e.target.value }); }); }, style: { width: "100%", background: C.bg, border: "1.5px solid " + C.border, borderRadius: 9, padding: "11px 14px", fontFamily: "Inter,sans-serif", fontSize: 13 } },
+            React.createElement("option", { value: "Basic" }, "Basic - 50 credits"),
+            React.createElement("option", { value: "Pro" }, "Pro - 250 credits"),
+            React.createElement("option", { value: "Agency" }, "Agency - 1500 credits"),
+            React.createElement("option", { value: "AgencyUnlimited" }, "Agency Unlimited")
           )
         ),
-
-        React.createElement("div", { style: { display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 16 } },
-          React.createElement("div", null, React.createElement("label", { style: ss.fmlabel }, "Due Date"), React.createElement(Input, { type: "date", value: newInvoice.dueDate, onChange: function(e) { setNewInvoice(function(p) { return Object.assign({}, p, { dueDate: e.target.value }); }); } })),
-          React.createElement("div", null, React.createElement("label", { style: ss.fmlabel }, "Status"), React.createElement("select", { value: newInvoice.status, onChange: function(e) { setNewInvoice(function(p) { return Object.assign({}, p, { status: e.target.value }); }); }, style: { width: "100%", background: C.bg, border: "1.5px solid " + C.border, borderRadius: 9, padding: "11px 14px", fontFamily: "Inter,sans-serif", fontSize: 13 } }, React.createElement("option", { value: "pending" }, "Pending"), React.createElement("option", { value: "paid" }, "Paid"), React.createElement("option", { value: "overdue" }, "Overdue")))
-        ),
-
-        React.createElement("div", { style: ss.fmgroup }, React.createElement("label", { style: ss.fmlabel }, "Notes / Terms"), React.createElement("textarea", { placeholder: "Additional notes or terms...", value: newInvoice.notes, onChange: function(e) { setNewInvoice(function(p) { return Object.assign({}, p, { notes: e.target.value }); }); }, style: { width: "100%", background: C.bg, border: "1.5px solid " + C.border, borderRadius: 9, padding: "11px 14px", fontFamily: "Inter,sans-serif", fontSize: 13, minHeight: 70, resize: "vertical", outline: "none" } })),
-
-        React.createElement("div", { style: { display: "flex", gap: 10, marginTop: 8 } },
-          React.createElement("button", { onClick: function() { setShowInvoiceModal(false); }, style: { flex: 1, padding: 11, borderRadius: 9, border: "1.5px solid " + C.border, background: "transparent", color: C.muted, fontFamily: "Inter,sans-serif", fontSize: 13, cursor: "pointer" } }, "Cancel"),
-          React.createElement(Btn, { variant: "primary", onClick: handleCreateInvoice }, "Create Invoice")
+        React.createElement("div", { style: { display: "flex", gap: 10, marginTop: 20 } },
+          React.createElement("button", { onClick: function() { setShowAddClient(false); }, style: { flex: 1, padding: 11, borderRadius: 9, border: "1.5px solid " + C.border, background: "transparent", color: C.muted, fontFamily: "Inter,sans-serif", fontSize: 13, cursor: "pointer" } }, "Cancel"),
+          React.createElement(Btn, { variant: "primary", onClick: handleAddClient, disabled: addingClient }, addingClient ? "Creating..." : "Add Client")
         )
       )
     ),
 
-    // EDIT CLIENT MODAL
     showEditModal && editClient && React.createElement("div", { style: ss.overlay, onClick: function(e) { if (e.target === e.currentTarget) setShowEditModal(false); } },
       React.createElement("div", { style: ss.modal },
         React.createElement("div", { style: { fontFamily: "Poppins,sans-serif", fontSize: 18, fontWeight: 700, marginBottom: 20 } }, "Edit Client"),
-        React.createElement("div", { style: ss.fmgroup },
-          React.createElement("label", { style: ss.fmlabel }, "Client Name"),
-          React.createElement(Input, { value: editClient.name || "", onChange: function(e) { setEditClient(function(c) { return Object.assign({}, c, { name: e.target.value }); }); } })
-        ),
-        React.createElement("div", { style: ss.fmgroup },
-          React.createElement("label", { style: ss.fmlabel }, "Email"),
-          React.createElement(Input, { value: editClient.email || "", onChange: function(e) { setEditClient(function(c) { return Object.assign({}, c, { email: e.target.value }); }); } })
-        ),
-        React.createElement("div", { style: ss.fmgroup },
-          React.createElement("label", { style: ss.fmlabel }, "New Password (leave blank to keep current)"),
-          React.createElement(Input, { type: "password", placeholder: "New password (optional)", value: editClient.newPassword || "", onChange: function(e) { setEditClient(function(c) { return Object.assign({}, c, { newPassword: e.target.value }); }); } })
-        ),
-        React.createElement("div", { style: ss.fmgroup },
-          React.createElement("label", { style: ss.fmlabel }, "Plan"),
+        React.createElement("div", { style: ss.fmgroup }, React.createElement("label", { style: ss.fmlabel }, "Client Name"), React.createElement(Input, { value: editClient.name || "", onChange: function(e) { setEditClient(function(c) { return Object.assign({}, c, { name: e.target.value }); }); } })),
+        React.createElement("div", { style: ss.fmgroup }, React.createElement("label", { style: ss.fmlabel }, "Email"), React.createElement(Input, { value: editClient.email || "", onChange: function(e) { setEditClient(function(c) { return Object.assign({}, c, { email: e.target.value }); }); } })),
+        React.createElement("div", { style: ss.fmgroup }, React.createElement("label", { style: ss.fmlabel }, "New Password (leave blank to keep current)"), React.createElement(Input, { type: "password", placeholder: "New password (optional)", value: editClient.newPassword || "", onChange: function(e) { setEditClient(function(c) { return Object.assign({}, c, { newPassword: e.target.value }); }); } })),
+        React.createElement("div", { style: ss.fmgroup }, React.createElement("label", { style: ss.fmlabel }, "Plan"),
           React.createElement("select", { value: editClient.plan || "Basic", onChange: function(e) { setEditClient(function(c) { return Object.assign({}, c, { plan: e.target.value }); }); }, style: { width: "100%", background: C.bg, border: "1.5px solid " + C.border, borderRadius: 9, padding: "11px 14px", fontFamily: "Inter,sans-serif", fontSize: 13 } },
-            React.createElement("option", { value: "Basic" }, "Basic - $19/mo"),
-            React.createElement("option", { value: "Pro" }, "Pro - $49/mo"),
-            React.createElement("option", { value: "Agency" }, "Agency - $149/mo")
+            React.createElement("option", { value: "Basic" }, "Basic - 50 credits"),
+            React.createElement("option", { value: "Pro" }, "Pro - 250 credits"),
+            React.createElement("option", { value: "Agency" }, "Agency - 1500 credits"),
+            React.createElement("option", { value: "AgencyUnlimited" }, "Agency Unlimited")
           )
         ),
         React.createElement("div", { style: { display: "flex", gap: 10, marginTop: 20 } },
@@ -1725,23 +1589,50 @@ export default function App() {
       )
     ),
 
-    // ADD CLIENT MODAL
-    showAddClient && React.createElement("div", { style: ss.overlay, onClick: function(e) { if (e.target === e.currentTarget) setShowAddClient(false); } },
-      React.createElement("div", { style: ss.modal },
-        React.createElement("div", { style: { fontFamily: "Poppins,sans-serif", fontSize: 18, fontWeight: 700, marginBottom: 20 } }, "Add New Client"),
-        React.createElement("div", { style: ss.infobx, marginBottom: 16 }, "Create client account. Client will verify email and login."),
-        React.createElement("div", { style: ss.fmgroup }, React.createElement("label", { style: ss.fmlabel }, "Full Name *"), React.createElement(Input, { placeholder: "Ali Store", value: newClient.name, onChange: function(e) { setNewClient(function(c) { return Object.assign({}, c, { name: e.target.value }); }); } })),
-        React.createElement("div", { style: ss.fmgroup }, React.createElement("label", { style: ss.fmlabel }, "Email *"), React.createElement(Input, { type: "email", placeholder: "client@email.com", value: newClient.email, onChange: function(e) { setNewClient(function(c) { return Object.assign({}, c, { email: e.target.value }); }); } })),
-        React.createElement("div", { style: ss.fmgroup }, React.createElement("label", { style: ss.fmlabel }, "Password *"), React.createElement(Input, { type: "password", placeholder: "Min 6 characters", value: newClient.password, onChange: function(e) { setNewClient(function(c) { return Object.assign({}, c, { password: e.target.value }); }); } })),
-        React.createElement("div", { style: ss.fmgroup }, React.createElement("label", { style: ss.fmlabel }, "Plan"), React.createElement("select", { value: newClient.plan, onChange: function(e) { setNewClient(function(c) { return Object.assign({}, c, { plan: e.target.value }); }); }, style: { width: "100%", background: C.bg, border: "1.5px solid " + C.border, borderRadius: 9, padding: "11px 14px", fontFamily: "Inter,sans-serif", fontSize: 13 } }, React.createElement("option", null, "Basic"), React.createElement("option", null, "Pro"), React.createElement("option", null, "Agency"))),
-        React.createElement("div", { style: { display: "flex", gap: 10, marginTop: 20 } },
-          React.createElement("button", { onClick: function() { setShowAddClient(false); }, style: { flex: 1, padding: 11, borderRadius: 9, border: "1.5px solid " + C.border, background: "transparent", color: C.muted, fontFamily: "Inter,sans-serif", fontSize: 13, cursor: "pointer" } }, "Cancel"),
-          React.createElement(Btn, { variant: "primary", onClick: handleAddClient, disabled: addingClient }, addingClient ? "Creating..." : "Add Client")
+    showInvoiceModal && React.createElement("div", { style: ss.overlay, onClick: function(e) { if (e.target === e.currentTarget) setShowInvoiceModal(false); } },
+      React.createElement("div", { style: Object.assign({}, ss.modal, { maxWidth: 560 }) },
+        React.createElement("div", { style: { fontFamily: "Poppins,sans-serif", fontSize: 18, fontWeight: 700, marginBottom: 20 } }, "Create New Invoice"),
+        React.createElement("div", { style: { fontFamily: "Poppins,sans-serif", fontSize: 13, fontWeight: 600, color: C.primary, marginBottom: 12 } }, "Customer Details"),
+        React.createElement("div", { style: { display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 16 } },
+          React.createElement("div", null, React.createElement("label", { style: ss.fmlabel }, "Customer Name *"), React.createElement(Input, { placeholder: "Ali Khan", value: newInvoice.customer.name, onChange: function(e) { setNewInvoice(function(p) { return Object.assign({}, p, { customer: Object.assign({}, p.customer, { name: e.target.value }) }); }); } })),
+          React.createElement("div", null, React.createElement("label", { style: ss.fmlabel }, "Phone Number"), React.createElement(Input, { placeholder: "+92-300-0000000", value: newInvoice.customer.phone, onChange: function(e) { setNewInvoice(function(p) { return Object.assign({}, p, { customer: Object.assign({}, p.customer, { phone: e.target.value }) }); }); } })),
+          React.createElement("div", null, React.createElement("label", { style: ss.fmlabel }, "Company Name"), React.createElement(Input, { placeholder: "Company Name", value: newInvoice.customer.company, onChange: function(e) { setNewInvoice(function(p) { return Object.assign({}, p, { customer: Object.assign({}, p.customer, { company: e.target.value }) }); }); } })),
+          React.createElement("div", null, React.createElement("label", { style: ss.fmlabel }, "WhatsApp Number"), React.createElement(Input, { placeholder: "923001234567", value: newInvoice.customer.whatsapp, onChange: function(e) { setNewInvoice(function(p) { return Object.assign({}, p, { customer: Object.assign({}, p.customer, { whatsapp: e.target.value }) }); }); } }))
+        ),
+        React.createElement("div", { style: { fontFamily: "Poppins,sans-serif", fontSize: 13, fontWeight: 600, color: C.primary, marginBottom: 12 } }, "Services"),
+        newInvoice.services.map(function(s, i) {
+          return React.createElement("div", { key: i, style: { display: "grid", gridTemplateColumns: "2fr 1fr 1fr auto", gap: 8, marginBottom: 8 } },
+            React.createElement(Input, { placeholder: "Service name", value: s.name, onChange: function(e) { var sv = newInvoice.services.slice(); sv[i] = Object.assign({}, sv[i], { name: e.target.value }); setNewInvoice(function(p) { return Object.assign({}, p, { services: sv }); }); } }),
+            React.createElement(Input, { placeholder: "Qty", value: s.qty, onChange: function(e) { var sv = newInvoice.services.slice(); sv[i] = Object.assign({}, sv[i], { qty: parseInt(e.target.value) || 1 }); setNewInvoice(function(p) { return Object.assign({}, p, { services: sv }); }); } }),
+            React.createElement(Input, { placeholder: "Price (PKR)", value: s.price, onChange: function(e) { var sv = newInvoice.services.slice(); sv[i] = Object.assign({}, sv[i], { price: parseInt(e.target.value) || 0 }); setNewInvoice(function(p) { return Object.assign({}, p, { services: sv }); }); } }),
+            React.createElement("button", { onClick: function() { setNewInvoice(function(p) { return Object.assign({}, p, { services: p.services.filter(function(_, j) { return j !== i; }) }); }); }, style: { background: "#fee2e2", border: "none", borderRadius: 6, padding: "8px 10px", color: "#dc2626", cursor: "pointer", fontWeight: 700 } }, "X")
+          );
+        }),
+        React.createElement("button", { onClick: function() { setNewInvoice(function(p) { return Object.assign({}, p, { services: p.services.concat([{ name: "", qty: 1, price: 0 }]) }); }); }, style: { background: "#eef2ff", border: "none", borderRadius: 8, padding: "8px 16px", color: C.primary, cursor: "pointer", fontSize: 12, fontWeight: 600, marginBottom: 16 } }, "+ Add Service"),
+        React.createElement("div", { style: { background: C.bg, border: "1px solid " + C.border, borderRadius: 8, padding: "12px 16px", marginBottom: 16, textAlign: "right" } },
+          React.createElement("div", { style: { fontFamily: "Poppins,sans-serif", fontSize: 18, fontWeight: 700, color: C.primary } }, "Total: " + formatPKR(calcTotal(newInvoice.services)))
+        ),
+        React.createElement("div", { style: { display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 16 } },
+          React.createElement("div", null, React.createElement("label", { style: ss.fmlabel }, "Due Date"), React.createElement(Input, { type: "date", value: newInvoice.dueDate, onChange: function(e) { setNewInvoice(function(p) { return Object.assign({}, p, { dueDate: e.target.value }); }); } })),
+          React.createElement("div", null, React.createElement("label", { style: ss.fmlabel }, "Status"),
+            React.createElement("select", { value: newInvoice.status, onChange: function(e) { setNewInvoice(function(p) { return Object.assign({}, p, { status: e.target.value }); }); }, style: { width: "100%", background: C.bg, border: "1.5px solid " + C.border, borderRadius: 9, padding: "11px 14px", fontFamily: "Inter,sans-serif", fontSize: 13 } },
+              React.createElement("option", { value: "pending" }, "Pending"),
+              React.createElement("option", { value: "paid" }, "Paid"),
+              React.createElement("option", { value: "overdue" }, "Overdue")
+            )
+          )
+        ),
+        React.createElement("div", { style: ss.fmgroup },
+          React.createElement("label", { style: ss.fmlabel }, "Notes / Terms"),
+          React.createElement("textarea", { placeholder: "Additional notes or terms...", value: newInvoice.notes, onChange: function(e) { setNewInvoice(function(p) { return Object.assign({}, p, { notes: e.target.value }); }); }, style: { width: "100%", background: C.bg, border: "1.5px solid " + C.border, borderRadius: 9, padding: "11px 14px", fontFamily: "Inter,sans-serif", fontSize: 13, minHeight: 70, resize: "vertical", outline: "none" } })
+        ),
+        React.createElement("div", { style: { display: "flex", gap: 10 } },
+          React.createElement("button", { onClick: function() { setShowInvoiceModal(false); }, style: { flex: 1, padding: 11, borderRadius: 9, border: "1.5px solid " + C.border, background: "transparent", color: C.muted, fontFamily: "Inter,sans-serif", fontSize: 13, cursor: "pointer" } }, "Cancel"),
+          React.createElement(Btn, { variant: "primary", onClick: handleCreateInvoice }, "Create Invoice")
         )
       )
     ),
 
-    // TOAST
     toast && React.createElement("div", { style: Object.assign({}, ss.toast, { borderLeft: "4px solid " + (toastErr ? C.danger : C.success) }) }, toast)
   );
 }
