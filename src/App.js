@@ -631,16 +631,16 @@ export default function App() {
   }, [session, profile]);
 
   function getRemainingCredits() {
-    var plan = (credits && credits.plan) || (profile && profile.plan) || "Basic";
-    if (plan === "AgencyUnlimited" || (credits && credits.is_unlimited)) return 999999;
+    var plan = (profile && profile.plan) || "Basic";
+    if (plan === "AgencyUnlimited") return 999999;
     var limit = PLAN_LIMITS[plan] || 50;
-    var used = credits ? (credits.used_credits || 0) : posts.length;
+    var used = credits ? (credits.used_credits || 0) : 0;
     return Math.max(0, limit - used);
   }
 
   function getTotalCredits() {
-    var plan = (credits && credits.plan) || (profile && profile.plan) || "Basic";
-    if (plan === "AgencyUnlimited" || (credits && credits.is_unlimited)) return -1;
+    var plan = (profile && profile.plan) || "Basic";
+    if (plan === "AgencyUnlimited") return -1;
     return PLAN_LIMITS[plan] || 50;
   }
 
@@ -1235,11 +1235,11 @@ export default function App() {
           React.createElement("div", { style: { display: "flex", gap: 14, alignItems: "flex-end", flexWrap: "wrap" } },
             React.createElement("div", { style: { flex: 1 } },
               React.createElement("div", { style: { fontSize: 11, color: "#94a3b8", textTransform: "uppercase", letterSpacing: 1, marginBottom: 7 } }, postType === "blog" ? "Blog Topic" : "Product Title"),
-              React.createElement(Input, { dark: true, placeholder: postType === "blog" ? "e.g. Best Sneakers in Pakistan" : "e.g. Nike Running Shoes", value: productTitle, onChange: function(e) { setProductTitle(e.target.value); }, onKeyDown: function(e) { if (e.key === "Enter") handleGenerate(); } })
+              React.createElement("input", { type: "text", placeholder: postType === "blog" ? "e.g. Best Sneakers in Pakistan" : "e.g. Nike Running Shoes", value: productTitle, onChange: function(e) { setProductTitle(e.target.value); }, onKeyDown: function(e) { if (e.key === "Enter") handleGenerate(); }, autoCorrect: "off", autoCapitalize: "words", autoComplete: "off", style: { width: "100%", background: "#273549", border: "1.5px solid #334155", borderRadius: 10, padding: "12px 14px", fontFamily: "Inter,sans-serif", fontSize: 16, color: "#f1f5f9", outline: "none" } })
             ),
             React.createElement("div", { style: { maxWidth: 170 } },
               React.createElement("div", { style: { fontSize: 11, color: "#94a3b8", textTransform: "uppercase", letterSpacing: 1, marginBottom: 7 } }, postType === "blog" ? "Focus Keyword" : "Price"),
-              React.createElement(Input, { dark: true, placeholder: postType === "blog" ? "keyword" : "e.g. PKR 3000", value: productPrice, onChange: function(e) { setProductPrice(e.target.value); }, onKeyDown: function(e) { if (e.key === "Enter") handleGenerate(); } })
+              React.createElement("input", { type: "text", placeholder: postType === "blog" ? "keyword" : "e.g. PKR 3000", value: productPrice, onChange: function(e) { setProductPrice(e.target.value); }, onKeyDown: function(e) { if (e.key === "Enter") handleGenerate(); }, autoCorrect: "off", autoCapitalize: "off", autoComplete: "off", style: { width: "100%", background: "#273549", border: "1.5px solid #334155", borderRadius: 10, padding: "12px 14px", fontFamily: "Inter,sans-serif", fontSize: 16, color: "#f1f5f9", outline: "none" } })
             ),
             React.createElement(Btn, { variant: "primary", onClick: handleGenerate, disabled: generating }, generating ? "Generating..." : "Generate Post")
           ),
@@ -1636,4 +1636,3 @@ export default function App() {
     toast && React.createElement("div", { style: Object.assign({}, ss.toast, { borderLeft: "4px solid " + (toastErr ? C.danger : C.success) }) }, toast)
   );
 }
-
