@@ -7,6 +7,7 @@ const ADMIN_USER = "admin";
 const ADMIN_PASS = "Pst@2026";
 // Plan credit limits
 const PLAN_LIMITS = {
+  Demo: 5,
   Basic: 50,
   Pro: 250,
   Agency: 1500,
@@ -557,9 +558,11 @@ export default function App() {
 
   function handleLogout() {
     if (session && session.token) authAPI.signOut(session.token).catch(function(){});
-    setSession(null); setProfile(null);
+    setSession(null); setProfile(null); setCredits(null);
     localStorage.removeItem("pr_sess"); localStorage.removeItem("pr_prof");
-    setPosts([]); setGenerated(null);
+    setPosts([]); setGenerated(null); setInvoices([]);
+    setLoginEmail(""); setLoginPw("");
+    setRegName(""); setRegEmail(""); setRegPw("");
   }
 
   function loadPosts() {
@@ -1111,7 +1114,7 @@ export default function App() {
   }
 
   function Badge(props) {
-    var colors = { pub: { bg: "#dcfce7", color: "#16a34a" }, draft: { bg: "#fef9c3", color: "#ca8a04" }, active: { bg: "#dcfce7", color: "#16a34a" }, disabled: { bg: "#fee2e2", color: "#dc2626" }, Basic: { bg: "#f1f5f9", color: "#475569" }, Pro: { bg: "#dbeafe", color: "#2563eb" }, Agency: { bg: "#fef3c7", color: "#d97706" }, AgencyUnlimited: { bg: "#f3e8ff", color: "#7c3aed" } };
+    var colors = { pub: { bg: "#dcfce7", color: "#16a34a" }, draft: { bg: "#fef9c3", color: "#ca8a04" }, active: { bg: "#dcfce7", color: "#16a34a" }, disabled: { bg: "#fee2e2", color: "#dc2626" }, Demo: { bg: "#fce7f3", color: "#be185d" }, Basic: { bg: "#f1f5f9", color: "#475569" }, Pro: { bg: "#dbeafe", color: "#2563eb" }, Agency: { bg: "#fef3c7", color: "#d97706" }, AgencyUnlimited: { bg: "#f3e8ff", color: "#7c3aed" } };
     var s = colors[props.type] || { bg: "#eef2ff", color: "#6366f1" };
     return React.createElement("span", { style: { background: s.bg, color: s.color, fontSize: 10, fontWeight: 600, padding: "3px 9px", borderRadius: 20, display: "inline-flex", alignItems: "center", gap: 4 } },
       React.createElement("span", { style: { width: 5, height: 5, borderRadius: "50%", background: "currentColor" } }),
@@ -1160,6 +1163,7 @@ export default function App() {
               React.createElement("div", { style: ss.fmgroup }, React.createElement("label", { style: ss.fmlabel }, "Password"), React.createElement("input", { type: "password", placeholder: "Min 6 characters", value: regPw, onChange: function(e) { setRegPw(e.target.value); }, autoComplete: "new-password", style: { width: "100%", background: "#f8fafc", border: "1.5px solid #e2e8f0", borderRadius: 9, padding: "11px 14px", fontFamily: "Inter,sans-serif", fontSize: 16, color: "#0f172a", outline: "none" } })),
               React.createElement("div", { style: ss.fmgroup }, React.createElement("label", { style: ss.fmlabel }, "Plan"),
                 React.createElement("select", { value: regPlan, onChange: function(e) { setRegPlan(e.target.value); }, style: { width: "100%", background: C.bg, border: "1.5px solid " + C.border, borderRadius: 9, padding: "11px 14px", fontFamily: "Inter,sans-serif", fontSize: 13 } },
+                  React.createElement("option", { value: "Demo" }, "Demo - Free (5 credits trial)"),
                   React.createElement("option", { value: "Basic" }, "Basic - $19/mo (50 credits)"),
                   React.createElement("option", { value: "Pro" }, "Pro - $49/mo (250 credits)"),
                   React.createElement("option", { value: "Agency" }, "Agency - $149/mo (1500 credits)")
@@ -1427,8 +1431,8 @@ export default function App() {
                 React.createElement("button", { onClick: function() { handleToggleStatus(c.id); }, style: { border: "none", borderRadius: 6, padding: "5px 10px", fontSize: 11, cursor: "pointer", fontWeight: 600, background: isActive ? "#fee2e2" : "#dcfce7", color: isActive ? "#dc2626" : "#16a34a" } }, isActive ? "Disable" : "Enable"),
                 React.createElement("button", { onClick: function() { setEditClient(Object.assign({}, c)); setShowEditModal(true); }, style: { border: "none", borderRadius: 6, padding: "5px 10px", fontSize: 11, cursor: "pointer", fontWeight: 600, background: "#dbeafe", color: "#2563eb" } }, "Edit"),
                 React.createElement("button", { onClick: function() {
-                  var np = window.prompt("Select plan:\n1. Basic (50 credits)\n2. Pro (250 credits)\n3. Agency (1500 credits)\n4. AgencyUnlimited (Unlimited)\n\nType exactly: Basic, Pro, Agency, or AgencyUnlimited", c.plan || "Basic");
-                  if (np && ["Basic","Pro","Agency","AgencyUnlimited"].indexOf(np) !== -1) {
+                  var np = window.prompt("Select plan:\n0. Demo (5 credits - Free Trial)\n1. Basic (50 credits)\n2. Pro (250 credits)\n3. Agency (1500 credits)\n4. AgencyUnlimited (Unlimited)\n\nType exactly: Demo, Basic, Pro, Agency, or AgencyUnlimited", c.plan || "Basic");
+                  if (np && ["Demo","Basic","Pro","Agency","AgencyUnlimited"].indexOf(np) !== -1) {
                     dbAPI.update("clients", "id=eq." + c.id, { plan: np }, SUPA_KEY).catch(function(){});
                     setClients(function(prev) { return prev.map(function(x) { return x.id === c.id ? Object.assign({}, x, { plan: np }) : x; }); });
                     notify("Plan updated to: " + np);
@@ -1527,6 +1531,7 @@ export default function App() {
         React.createElement("div", { style: { marginBottom: 28 } }, React.createElement("div", { style: { fontFamily: "Poppins,sans-serif", fontSize: 24, fontWeight: 700 } }, "Plans"), React.createElement("div", { style: { fontSize: 12, color: C.muted, marginTop: 5 } }, "Simple monthly billing. Cancel anytime.")),
         React.createElement("div", { style: ss.plansgrid },
           [
+            { name: "Demo", price: "Free", credits: "5 credits only", feats: ["5 posts trial", "Local & International SEO", "1 website", "Email support", "Try before you buy"], featured: false },
             { name: "Basic", price: "$19", credits: "50 credits/month", feats: ["50 posts/month", "Local & International SEO", "1 website", "Email support", "Basic analytics"], featured: false },
             { name: "Pro", price: "$49", credits: "250 credits/month", feats: ["250 posts/month", "Advanced SEO optimization", "5 websites", "Priority support", "Full analytics", "WordPress & Shopify"], featured: true },
             { name: "Agency", price: "$149", credits: "1500 or Unlimited", feats: ["1500 or Unlimited posts", "Full SEO suite", "Unlimited websites", "Dedicated support", "White-label option", "API access", "Custom letterhead"], featured: false },
@@ -1555,6 +1560,8 @@ export default function App() {
         React.createElement("div", { style: ss.fmgroup }, React.createElement("label", { style: ss.fmlabel }, "Password *"), React.createElement(Input, { type: "password", placeholder: "Min 6 characters", value: newClient.password, onChange: function(e) { setNewClient(function(c) { return Object.assign({}, c, { password: e.target.value }); }); } })),
         React.createElement("div", { style: ss.fmgroup }, React.createElement("label", { style: ss.fmlabel }, "Plan"),
           React.createElement("select", { value: newClient.plan, onChange: function(e) { setNewClient(function(c) { return Object.assign({}, c, { plan: e.target.value }); }); }, style: { width: "100%", background: C.bg, border: "1.5px solid " + C.border, borderRadius: 9, padding: "11px 14px", fontFamily: "Inter,sans-serif", fontSize: 13 } },
+            React.createElement("option", { value: "Demo" }, "Demo - 5 credits (Free Trial)"),
+            React.createElement("option", { value: "Demo" }, "Demo - 5 credits (Free Trial)"),
             React.createElement("option", { value: "Basic" }, "Basic - 50 credits"),
             React.createElement("option", { value: "Pro" }, "Pro - 250 credits"),
             React.createElement("option", { value: "Agency" }, "Agency - 1500 credits"),
@@ -1576,6 +1583,8 @@ export default function App() {
         React.createElement("div", { style: ss.fmgroup }, React.createElement("label", { style: ss.fmlabel }, "New Password (leave blank to keep current)"), React.createElement(Input, { type: "password", placeholder: "New password (optional)", value: editClient.newPassword || "", onChange: function(e) { setEditClient(function(c) { return Object.assign({}, c, { newPassword: e.target.value }); }); } })),
         React.createElement("div", { style: ss.fmgroup }, React.createElement("label", { style: ss.fmlabel }, "Plan"),
           React.createElement("select", { value: editClient.plan || "Basic", onChange: function(e) { setEditClient(function(c) { return Object.assign({}, c, { plan: e.target.value }); }); }, style: { width: "100%", background: C.bg, border: "1.5px solid " + C.border, borderRadius: 9, padding: "11px 14px", fontFamily: "Inter,sans-serif", fontSize: 13 } },
+            React.createElement("option", { value: "Demo" }, "Demo - 5 credits (Free Trial)"),
+            React.createElement("option", { value: "Demo" }, "Demo - 5 credits (Free Trial)"),
             React.createElement("option", { value: "Basic" }, "Basic - 50 credits"),
             React.createElement("option", { value: "Pro" }, "Pro - 250 credits"),
             React.createElement("option", { value: "Agency" }, "Agency - 1500 credits"),
