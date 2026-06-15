@@ -820,11 +820,7 @@ export default function App() {
   }
 
   function getNextInvoiceNo() {
-    var num = invoices.length + 1;
-    return "INV-" + String(num).padStart(4, "0");
-  }
-
-  function handleCreateInvoice() {
+    function handleCreateInvoice() {
     if (!newInvoice.customer.name) { notify("Customer name zaroor bharen!", true); return; }
     var today = new Date().toISOString().split("T")[0];
     var invNo = getNextInvoiceNo();
@@ -1650,3 +1646,6 @@ export default function App() {
     toast && React.createElement("div", { style: Object.assign({}, ss.toast, { borderLeft: "4px solid " + (toastErr ? C.danger : C.success) }) }, toast)
   );
 }
+    var num = invoices.length + 1;
+    return "INV-" + String(num).padStart(4, "0");
+  }
