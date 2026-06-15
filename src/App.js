@@ -603,19 +603,21 @@ export default function App() {
   function loadCredits() {
     if (!session || !session.user) return;
     var userId = session.user.id;
+    var plan = (profile && profile.plan) || "Basic";
+    var limit = PLAN_LIMITS[plan] || 50;
+    var isUnlim = plan === "AgencyUnlimited";
     dbAPI.select("credits", "user_id=eq." + userId, SUPA_KEY).then(function(data) {
       if (data && data[0]) {
-        setCredits(data[0]);
+        // Update with correct plan limits
+        var rec = Object.assign({}, data[0], { plan: plan, total_credits: limit, is_unlimited: isUnlim });
+        setCredits(rec);
       } else {
-        // Initialize credits based on plan
-        var plan = profile ? profile.plan : "Basic";
-        var limit = PLAN_LIMITS[plan] || 50;
         var rec = {
           user_id: userId,
           plan: plan,
           total_credits: limit,
           used_credits: 0,
-          is_unlimited: plan === "AgencyUnlimited",
+          is_unlimited: isUnlim,
           reset_date: new Date(new Date().getFullYear(), new Date().getMonth() + 1, 1).toISOString().split("T")[0],
           created_at: new Date().toISOString(),
         };
@@ -624,8 +626,7 @@ export default function App() {
         }).catch(function() { setCredits(rec); });
       }
     }).catch(function() {
-      var plan = profile ? profile.plan : "Basic";
-      setCredits({ total_credits: PLAN_LIMITS[plan] || 50, used_credits: posts.length, is_unlimited: false, plan: plan });
+      setCredits({ total_credits: limit, used_credits: 0, is_unlimited: isUnlim, plan: plan });
     });
   }
 
@@ -636,7 +637,7 @@ export default function App() {
   function getRemainingCredits() {
     var plan = (profile && profile.plan) || "Basic";
     if (plan === "AgencyUnlimited") return 999999;
-    var limit = PLAN_LIMITS[plan] || 50;
+    var limit = PLAN_LIMITS[plan] || 5;
     var used = credits ? (credits.used_credits || 0) : 0;
     return Math.max(0, limit - used);
   }
@@ -644,7 +645,7 @@ export default function App() {
   function getTotalCredits() {
     var plan = (profile && profile.plan) || "Basic";
     if (plan === "AgencyUnlimited") return -1;
-    return PLAN_LIMITS[plan] || 50;
+    return PLAN_LIMITS[plan] || 5;
   }
 
   function useCredit() {
@@ -1101,9 +1102,13 @@ export default function App() {
   };
 
   function Input(props) {
-    var style = { width: "100%", background: props.dark ? "#273549" : C.bg, border: "1.5px solid " + (props.dark ? "#334155" : C.border), borderRadius: 9, padding: "11px 14px", fontFamily: "Inter,sans-serif", fontSize: 16, color: props.dark ? "#f1f5f9" : C.ink, outline: "none", WebkitAppearance: "none" };
+    var style = { width: "100%", background: props.dark ? "#273549" : C.bg, border: "1.5px solid " + (props.dark ? "#334155" : C.border), borderRadius: 9, padding: "11px 14px", fontFamily: "Inter,sans-serif", fontSize: 16, color: props.dark ? "#f1f5f9" : C.ink, outline: "none", WebkitAppearance: "none", WebkitTextSizeAdjust: "100%" };
     var p = Object.assign({}, props);
     delete p.dark;
+    if (!p.autoComplete) p.autoComplete = "off";
+    if (!p.autoCorrect) p.autoCorrect = "off";
+    if (!p.autoCapitalize) p.autoCapitalize = "off";
+    p.spellCheck = false;
     return React.createElement("input", Object.assign({ style: style }, p));
   }
 
@@ -1162,7 +1167,7 @@ export default function App() {
               React.createElement("div", { style: ss.fmgroup }, React.createElement("label", { style: ss.fmlabel }, "Email"), React.createElement("input", { type: "email", placeholder: "your@email.com", value: regEmail, onChange: function(e) { setRegEmail(e.target.value); }, autoComplete: "email", autoCapitalize: "off", style: { width: "100%", background: "#f8fafc", border: "1.5px solid #e2e8f0", borderRadius: 9, padding: "11px 14px", fontFamily: "Inter,sans-serif", fontSize: 16, color: "#0f172a", outline: "none" } })),
               React.createElement("div", { style: ss.fmgroup }, React.createElement("label", { style: ss.fmlabel }, "Password"), React.createElement("input", { type: "password", placeholder: "Min 6 characters", value: regPw, onChange: function(e) { setRegPw(e.target.value); }, autoComplete: "new-password", style: { width: "100%", background: "#f8fafc", border: "1.5px solid #e2e8f0", borderRadius: 9, padding: "11px 14px", fontFamily: "Inter,sans-serif", fontSize: 16, color: "#0f172a", outline: "none" } })),
               React.createElement("div", { style: ss.fmgroup }, React.createElement("label", { style: ss.fmlabel }, "Plan"),
-                React.createElement("select", { value: regPlan, onChange: function(e) { setRegPlan(e.target.value); }, style: { width: "100%", background: C.bg, border: "1.5px solid " + C.border, borderRadius: 9, padding: "11px 14px", fontFamily: "Inter,sans-serif", fontSize: 13 } },
+                React.createElement("select", { value: regPlan, onChange: function(e) { setRegPlan(e.target.value); }, style: { width: "100%", background: C.bg, border: "1.5px solid " + C.border, borderRadius: 9, padding: "11px 14px", fontFamily: "Inter,sans-serif", fontSize: 16 } },
                   React.createElement("option", { value: "Demo" }, "Demo - Free (5 credits trial)"),
                   React.createElement("option", { value: "Basic" }, "Basic - $19/mo (50 credits)"),
                   React.createElement("option", { value: "Pro" }, "Pro - $49/mo (250 credits)"),
@@ -1559,7 +1564,7 @@ export default function App() {
         React.createElement("div", { style: ss.fmgroup }, React.createElement("label", { style: ss.fmlabel }, "Email *"), React.createElement(Input, { type: "email", placeholder: "client@email.com", value: newClient.email, onChange: function(e) { setNewClient(function(c) { return Object.assign({}, c, { email: e.target.value }); }); } })),
         React.createElement("div", { style: ss.fmgroup }, React.createElement("label", { style: ss.fmlabel }, "Password *"), React.createElement(Input, { type: "password", placeholder: "Min 6 characters", value: newClient.password, onChange: function(e) { setNewClient(function(c) { return Object.assign({}, c, { password: e.target.value }); }); } })),
         React.createElement("div", { style: ss.fmgroup }, React.createElement("label", { style: ss.fmlabel }, "Plan"),
-          React.createElement("select", { value: newClient.plan, onChange: function(e) { setNewClient(function(c) { return Object.assign({}, c, { plan: e.target.value }); }); }, style: { width: "100%", background: C.bg, border: "1.5px solid " + C.border, borderRadius: 9, padding: "11px 14px", fontFamily: "Inter,sans-serif", fontSize: 13 } },
+          React.createElement("select", { value: newClient.plan, onChange: function(e) { setNewClient(function(c) { return Object.assign({}, c, { plan: e.target.value }); }); }, style: { width: "100%", background: C.bg, border: "1.5px solid " + C.border, borderRadius: 9, padding: "11px 14px", fontFamily: "Inter,sans-serif", fontSize: 16 } },
             React.createElement("option", { value: "Demo" }, "Demo - 5 credits (Free Trial)"),
             React.createElement("option", { value: "Demo" }, "Demo - 5 credits (Free Trial)"),
             React.createElement("option", { value: "Basic" }, "Basic - 50 credits"),
@@ -1582,7 +1587,7 @@ export default function App() {
         React.createElement("div", { style: ss.fmgroup }, React.createElement("label", { style: ss.fmlabel }, "Email"), React.createElement(Input, { value: editClient.email || "", onChange: function(e) { setEditClient(function(c) { return Object.assign({}, c, { email: e.target.value }); }); } })),
         React.createElement("div", { style: ss.fmgroup }, React.createElement("label", { style: ss.fmlabel }, "New Password (leave blank to keep current)"), React.createElement(Input, { type: "password", placeholder: "New password (optional)", value: editClient.newPassword || "", onChange: function(e) { setEditClient(function(c) { return Object.assign({}, c, { newPassword: e.target.value }); }); } })),
         React.createElement("div", { style: ss.fmgroup }, React.createElement("label", { style: ss.fmlabel }, "Plan"),
-          React.createElement("select", { value: editClient.plan || "Basic", onChange: function(e) { setEditClient(function(c) { return Object.assign({}, c, { plan: e.target.value }); }); }, style: { width: "100%", background: C.bg, border: "1.5px solid " + C.border, borderRadius: 9, padding: "11px 14px", fontFamily: "Inter,sans-serif", fontSize: 13 } },
+          React.createElement("select", { value: editClient.plan || "Basic", onChange: function(e) { setEditClient(function(c) { return Object.assign({}, c, { plan: e.target.value }); }); }, style: { width: "100%", background: C.bg, border: "1.5px solid " + C.border, borderRadius: 9, padding: "11px 14px", fontFamily: "Inter,sans-serif", fontSize: 16 } },
             React.createElement("option", { value: "Demo" }, "Demo - 5 credits (Free Trial)"),
             React.createElement("option", { value: "Demo" }, "Demo - 5 credits (Free Trial)"),
             React.createElement("option", { value: "Basic" }, "Basic - 50 credits"),
@@ -1624,7 +1629,7 @@ export default function App() {
         React.createElement("div", { style: { display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 16 } },
           React.createElement("div", null, React.createElement("label", { style: ss.fmlabel }, "Due Date"), React.createElement(Input, { type: "date", value: newInvoice.dueDate, onChange: function(e) { setNewInvoice(function(p) { return Object.assign({}, p, { dueDate: e.target.value }); }); } })),
           React.createElement("div", null, React.createElement("label", { style: ss.fmlabel }, "Status"),
-            React.createElement("select", { value: newInvoice.status, onChange: function(e) { setNewInvoice(function(p) { return Object.assign({}, p, { status: e.target.value }); }); }, style: { width: "100%", background: C.bg, border: "1.5px solid " + C.border, borderRadius: 9, padding: "11px 14px", fontFamily: "Inter,sans-serif", fontSize: 13 } },
+            React.createElement("select", { value: newInvoice.status, onChange: function(e) { setNewInvoice(function(p) { return Object.assign({}, p, { status: e.target.value }); }); }, style: { width: "100%", background: C.bg, border: "1.5px solid " + C.border, borderRadius: 9, padding: "11px 14px", fontFamily: "Inter,sans-serif", fontSize: 16 } },
               React.createElement("option", { value: "pending" }, "Pending"),
               React.createElement("option", { value: "paid" }, "Paid"),
               React.createElement("option", { value: "overdue" }, "Overdue")
