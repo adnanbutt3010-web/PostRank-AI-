@@ -530,16 +530,31 @@ export default function App() {
         role: meta.role || "client",
         plan: meta.plan || "Basic"
       };
-      // Load plan from clients table
-      fetch(SUPA_URL + "/rest/v1/clients?email=eq." + encodeURIComponent(user.email || loginEmail), {
+      // Load plan from clients table - critical for correct credits
+      fetch(SUPA_URL + "/rest/v1/clients?email=eq." + encodeURIComponent(user.email || loginEmail) + "&select=plan,name,status", {
         headers: { apikey: SUPA_KEY, Authorization: "Bearer " + SUPA_KEY }
       }).then(function(r) { return r.json(); }).then(function(data) {
-        if (data && data[0] && data[0].plan) {
-          prof.plan = data[0].plan;
-          setProfile(Object.assign({}, prof, { plan: data[0].plan }));
-          localStorage.setItem("pr_prof", JSON.stringify(Object.assign({}, prof, { plan: data[0].plan })));
-        }
-      }).catch(function(){});
+        var clientPlan = (data && data[0] && data[0].plan) ? data[0].plan : prof.plan;
+        var updatedProf = Object.assign({}, prof, { plan: clientPlan });
+        setProfile(updatedProf);
+        localStorage.setItem("pr_prof", JSON.stringify(updatedProf));
+        // Now load credits with correct plan
+        var limit = PLAN_LIMITS[clientPlan] || 5;
+        var isUnlim = clientPlan === "AgencyUnlimited";
+        fetch(SUPA_URL + "/rest/v1/credits?user_id=eq." + (user.id || ""), {
+          headers: { apikey: SUPA_KEY, Authorization: "Bearer " + SUPA_KEY }
+        }).then(function(r2) { return r2.json(); }).then(function(cd) {
+          if (cd && cd[0]) {
+            setCredits(Object.assign({}, cd[0], { plan: clientPlan, total_credits: limit, is_unlimited: isUnlim }));
+          } else {
+            setCredits({ plan: clientPlan, total_credits: limit, used_credits: 0, is_unlimited: isUnlim });
+          }
+        }).catch(function() {
+          setCredits({ plan: clientPlan, total_credits: limit, used_credits: 0, is_unlimited: isUnlim });
+        });
+      }).catch(function(){
+        setCredits({ plan: prof.plan, total_credits: PLAN_LIMITS[prof.plan] || 5, used_credits: 0, is_unlimited: false });
+      });
       setSession(sess); setProfile(prof);
       localStorage.setItem("pr_sess", JSON.stringify(sess));
       localStorage.setItem("pr_prof", JSON.stringify(prof));
@@ -603,21 +618,36 @@ export default function App() {
   function loadCredits() {
     if (!session || !session.user) return;
     var userId = session.user.id;
-    var plan = (profile && profile.plan) || "Basic";
-    var limit = PLAN_LIMITS[plan] || 50;
+    var userEmail = session.user.email || "";
+    // Always fetch latest plan from clients table
+    fetch(SUPA_URL + "/rest/v1/clients?email=eq." + encodeURIComponent(userEmail) + "&select=plan", {
+      headers: { apikey: SUPA_KEY, Authorization: "Bearer " + SUPA_KEY }
+    }).then(function(r) { return r.json(); }).then(function(cd) {
+      var latestPlan = (cd && cd[0] && cd[0].plan) ? cd[0].plan : ((profile && profile.plan) || "Basic");
+      if (latestPlan !== (profile && profile.plan)) {
+        var updatedProf = Object.assign({}, profile, { plan: latestPlan });
+        setProfile(updatedProf);
+        localStorage.setItem("pr_prof", JSON.stringify(updatedProf));
+      }
+      _loadCreditsWithPlan(userId, latestPlan);
+    }).catch(function() {
+      _loadCreditsWithPlan(userId, (profile && profile.plan) || "Basic");
+    });
+  }
+
+  function _loadCreditsWithPlan(userId, plan) {
+    var limit = PLAN_LIMITS[plan] || 5;
     var isUnlim = plan === "AgencyUnlimited";
     dbAPI.select("credits", "user_id=eq." + userId, SUPA_KEY).then(function(data) {
       if (data && data[0]) {
-        // Update with correct plan limits
         var rec = Object.assign({}, data[0], { plan: plan, total_credits: limit, is_unlimited: isUnlim });
         setCredits(rec);
+        // Update DB with correct plan/limits
+        dbAPI.update("credits", "user_id=eq." + userId, { plan: plan, total_credits: limit, is_unlimited: isUnlim }, SUPA_KEY).catch(function(){});
       } else {
         var rec = {
-          user_id: userId,
-          plan: plan,
-          total_credits: limit,
-          used_credits: 0,
-          is_unlimited: isUnlim,
+          user_id: userId, plan: plan, total_credits: limit,
+          used_credits: 0, is_unlimited: isUnlim,
           reset_date: new Date(new Date().getFullYear(), new Date().getMonth() + 1, 1).toISOString().split("T")[0],
           created_at: new Date().toISOString(),
         };
@@ -631,8 +661,10 @@ export default function App() {
   }
 
   useEffect(function() {
-    if (session && !isAdmin) loadCredits();
-  }, [session, profile]);
+    if (session && !isAdmin && profile && profile.plan) {
+      loadCredits();
+    }
+  }, [session, profile && profile.plan]);
 
   function getRemainingCredits() {
     var plan = (profile && profile.plan) || "Basic";
@@ -1650,3 +1682,4 @@ export default function App() {
     toast && React.createElement("div", { style: Object.assign({}, ss.toast, { borderLeft: "4px solid " + (toastErr ? C.danger : C.success) }) }, toast)
   );
 }
+
