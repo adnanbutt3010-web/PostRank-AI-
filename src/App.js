@@ -824,17 +824,25 @@ export default function App() {
   }
 
   function handleToggleStatus(clientId) {
-    setClients(function(prev) {
-      return prev.map(function(c) {
-        if (c.id === clientId) {
-          var newStatus = c.status === "active" ? "disabled" : "active";
-          // Update in Supabase too
-          dbAPI.update("clients", "id=eq." + clientId, { status: newStatus }, SUPA_KEY).catch(function(){});
-          notify(newStatus === "active" ? "Client enabled successfully!" : "Client disabled successfully!");
-          return Object.assign({}, c, { status: newStatus });
-        }
-        return c;
+    var client = clients.find(function(c) { return c.id === clientId; });
+    if (!client) return;
+    var newStatus = client.status === "active" ? "disabled" : "active";
+    // Update in Supabase
+    fetch(SUPA_URL + "/rest/v1/clients?id=eq." + clientId, {
+      method: "PATCH",
+      headers: { apikey: SUPA_KEY, Authorization: "Bearer " + SUPA_KEY, "Content-Type": "application/json", Prefer: "return=representation" },
+      body: JSON.stringify({ status: newStatus })
+    }).then(function() {
+      setClients(function(prev) {
+        return prev.map(function(c) { return c.id === clientId ? Object.assign({}, c, { status: newStatus }) : c; });
       });
+      notify(newStatus === "active" ? "Client enabled!" : "Client disabled! They cannot login now.");
+    }).catch(function(e) {
+      // Update locally even if DB fails
+      setClients(function(prev) {
+        return prev.map(function(c) { return c.id === clientId ? Object.assign({}, c, { status: newStatus }) : c; });
+      });
+      notify(newStatus === "active" ? "Client enabled!" : "Client disabled!");
     });
   }
 
@@ -1465,7 +1473,7 @@ export default function App() {
               React.createElement("div", { style: { fontSize: 11, color: C.muted } }, c.created_at ? new Date(c.created_at).toLocaleDateString() : "-"),
               React.createElement(Badge, { type: isActive ? "active" : "disabled" }, isActive ? "Active" : "Disabled"),
               React.createElement("div", { style: { display: "flex", gap: 5, flexWrap: "wrap" } },
-                React.createElement("button", { onClick: function() { handleToggleStatus(c.id); }, style: { border: "none", borderRadius: 6, padding: "5px 10px", fontSize: 11, cursor: "pointer", fontWeight: 600, background: isActive ? "#fee2e2" : "#dcfce7", color: isActive ? "#dc2626" : "#16a34a" } }, isActive ? "Disable" : "Enable"),
+                React.createElement("button", { onClick: function() { handleToggleStatus(c.id); }, style: { border: "none", borderRadius: 6, padding: "5px 10px", fontSize: 11, cursor: "pointer", fontWeight: 600, background: isActive ? "#fee2e2" : "#dcfce7", color: isActive ? "#dc2626" : "#16a34a", minWidth: 60 } }, isActive ? "Disable" : "Enable"),
                 React.createElement("button", { onClick: function() { setEditClient(Object.assign({}, c)); setShowEditModal(true); }, style: { border: "none", borderRadius: 6, padding: "5px 10px", fontSize: 11, cursor: "pointer", fontWeight: 600, background: "#dbeafe", color: "#2563eb" } }, "Edit"),
                 React.createElement("button", { onClick: function() {
                   var np = window.prompt("Select plan:\n0. Demo (5 credits - Free Trial)\n1. Basic (50 credits)\n2. Pro (250 credits)\n3. Agency (1500 credits)\n4. AgencyUnlimited (Unlimited)\n\nType exactly: Demo, Basic, Pro, Agency, or AgencyUnlimited", c.plan || "Basic");
@@ -1475,7 +1483,7 @@ export default function App() {
                     notify("Plan updated to: " + np);
                   }
                 }, style: { border: "none", borderRadius: 6, padding: "5px 10px", fontSize: 11, cursor: "pointer", fontWeight: 600, background: "#fef3c7", color: "#d97706" } }, "Plan"),
-                React.createElement("button", { onClick: function() { handleDeleteClient(c.id); }, style: { border: "none", borderRadius: 6, padding: "5px 10px", fontSize: 11, cursor: "pointer", fontWeight: 600, background: "#fee2e2", color: "#dc2626" } }, "Delete")
+                React.createElement("button", { onClick: function() { handleDeleteClient(c.id); }, style: { border: "none", borderRadius: 6, padding: "5px 10px", fontSize: 11, cursor: "pointer", fontWeight: 600, background: "#fee2e2", color: "#dc2626", minWidth: 50 } }, "Delete")
               )
             );
           })
