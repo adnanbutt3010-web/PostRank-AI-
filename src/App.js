@@ -517,8 +517,15 @@ export default function App() {
       return;
     }
 
-    // Client login via Supabase
-    authAPI.signIn(loginEmail, loginPw).then(function(d) {
+    // Client login via Supabase - first check clients table for status BEFORE signing in
+    fetch(SUPA_URL + "/rest/v1/clients?email=eq." + encodeURIComponent(loginEmail) + "&select=plan,name,status", {
+      headers: { apikey: SUPA_KEY, Authorization: "Bearer " + SUPA_KEY }
+    }).then(function(r) { return r.json(); }).then(function(preCheck) {
+      if (preCheck && preCheck[0] && preCheck[0].status === "disabled") {
+        throw new Error("Your account has been disabled. Please contact admin.");
+      }
+      return authAPI.signIn(loginEmail, loginPw);
+    }).then(function(d) {
       if (!d || !d.access_token) throw new Error("Login failed - check email/password");
       var user = d.user || {};
       var meta = user.user_metadata || {};
@@ -808,18 +815,17 @@ export default function App() {
     });
   }
 
-  function handleDeleteeteClient(clientId) {
+  function handleDeleteClient(clientId) {
     if (!window.confirm("Are you sure you want to delete this client?")) return;
     fetch(SUPA_URL + "/rest/v1/clients?id=eq." + clientId, {
       method: "DELETE",
       headers: { apikey: SUPA_KEY, Authorization: "Bearer " + SUPA_KEY }
-    }).then(function() {
+    }).then(function(r) {
+      if (!r.ok) throw new Error("Delete failed");
       setClients(function(prev) { return prev.filter(function(c) { return c.id !== clientId; }); });
       notify("Client delete ho gaya!");
     }).catch(function(e) {
-      // Fallback - remove locally
-      setClients(function(prev) { return prev.filter(function(c) { return c.id !== clientId; }); });
-      notify("Client remove ho gaya!");
+      notify("Delete failed: " + e.message, true);
     });
   }
 
@@ -905,14 +911,18 @@ export default function App() {
     setShowInvoiceModal(false);
   }
 
-  function handleDeleteeteInvoice(id) {
+  function handleDeleteInvoice(id) {
     if (!window.confirm("Delete this invoice?")) return;
     fetch(SUPA_URL + "/rest/v1/invoices?id=eq." + id, {
       method: "DELETE",
       headers: { apikey: SUPA_KEY, Authorization: "Bearer " + SUPA_KEY }
-    }).catch(function(){});
-    setInvoices(function(prev) { return prev.filter(function(i) { return i.id !== id; }); });
-    notify("Invoice deleted!");
+    }).then(function(r) {
+      if (!r.ok) throw new Error("Delete failed");
+      setInvoices(function(prev) { return prev.filter(function(i) { return i.id !== id; }); });
+      notify("Invoice deleted!");
+    }).catch(function(e) {
+      notify("Delete failed: " + e.message, true);
+    });
   }
 
   function handleStatusChange(id, status) {
@@ -1690,4 +1700,3 @@ export default function App() {
     toast && React.createElement("div", { style: Object.assign({}, ss.toast, { borderLeft: "4px solid " + (toastErr ? C.danger : C.success) }) }, toast)
   );
 }
-
