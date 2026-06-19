@@ -521,7 +521,10 @@ export default function App() {
     fetch(SUPA_URL + "/rest/v1/clients?email=eq." + encodeURIComponent(loginEmail) + "&select=plan,name,status", {
       headers: { apikey: SUPA_KEY, Authorization: "Bearer " + SUPA_KEY }
     }).then(function(r) { return r.json(); }).then(function(preCheck) {
-      if (preCheck && preCheck[0] && preCheck[0].status === "disabled") {
+      if (!preCheck || preCheck.length === 0) {
+        throw new Error("Account not found. Please contact admin.");
+      }
+      if (preCheck[0].status === "disabled") {
         throw new Error("Your account has been disabled. Please contact admin.");
       }
       return authAPI.signIn(loginEmail, loginPw);
