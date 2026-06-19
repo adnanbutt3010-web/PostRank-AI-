@@ -313,7 +313,7 @@ var C = {
 };
 
 function Badge(props) {
-  var colors = { pub: { bg: "#dcfce7", color: "#16a34a" }, draft: { bg: "#fef9c3", color: "#ca8a04" }, active: { bg: "#dcfce7", color: "#16a34a" }, disabled: { bg: "#fee2e2", color: "#dc2626" }, Basic: { bg: "#f1f5f9", color: "#475569" }, Pro: { bg: "#dbeafe", color: "#2563eb" }, Agency: { bg: "#fef3c7", color: "#d97706" } };
+  var colors = { pub: { bg: "#dcfce7", color: "#16a34a" }, draft: { bg: "#fef9c3", color: "#ca8a04" }, active: { bg: "#dcfce7", color: "#16a34a" }, disabled: { bg: "#fee2e2", color: "#dc2626" }, Demo: { bg: "#fce7f3", color: "#be185d" }, Basic: { bg: "#f1f5f9", color: "#475569" }, Pro: { bg: "#dbeafe", color: "#2563eb" }, Agency: { bg: "#fef3c7", color: "#d97706" }, AgencyUnlimited: { bg: "#f3e8ff", color: "#7c3aed" } };
   var s = colors[props.type] || { bg: C.primaryLight, color: C.primary };
   return React.createElement("span", { style: { background: s.bg, color: s.color, fontSize: 10, fontWeight: 600, padding: "3px 9px", borderRadius: 20, display: "inline-flex", alignItems: "center", gap: 4 } },
     React.createElement("span", { style: { width: 5, height: 5, borderRadius: "50%", background: "currentColor" } }),
@@ -322,7 +322,14 @@ function Badge(props) {
 }
 
 function Input(props) {
-  return React.createElement("input", Object.assign({ style: { width: "100%", background: props.dark ? "#273549" : C.bg, border: "1.5px solid " + (props.dark ? "#334155" : C.border), borderRadius: 9, padding: "11px 14px", fontFamily: "Inter,sans-serif", fontSize: 13, color: props.dark ? "#f1f5f9" : C.ink, outline: "none" } }, props));
+  var style = { width: "100%", background: props.dark ? "#273549" : C.bg, border: "1.5px solid " + (props.dark ? "#334155" : C.border), borderRadius: 9, padding: "11px 14px", fontFamily: "Inter,sans-serif", fontSize: 16, color: props.dark ? "#f1f5f9" : C.ink, outline: "none", WebkitAppearance: "none", WebkitTextSizeAdjust: "100%" };
+  var p = Object.assign({}, props);
+  delete p.dark;
+  if (!p.autoComplete) p.autoComplete = "off";
+  if (!p.autoCorrect) p.autoCorrect = "off";
+  if (!p.autoCapitalize) p.autoCapitalize = "off";
+  p.spellCheck = false;
+  return React.createElement("input", Object.assign({ style: style }, p));
 }
 
 function Btn(props) {
@@ -1153,32 +1160,6 @@ export default function App() {
     fmgroup: { marginBottom: 16 },
     toast: { position: "fixed", bottom: 28, right: 28, background: "#1e293b", color: "#f1f5f9", padding: "13px 20px", borderRadius: 10, fontSize: 13, display: "flex", alignItems: "center", gap: 8, boxShadow: "0 8px 24px rgba(0,0,0,0.18)", zIndex: 9999 },
   };
-
-  function Input(props) {
-    var style = { width: "100%", background: props.dark ? "#273549" : C.bg, border: "1.5px solid " + (props.dark ? "#334155" : C.border), borderRadius: 9, padding: "11px 14px", fontFamily: "Inter,sans-serif", fontSize: 16, color: props.dark ? "#f1f5f9" : C.ink, outline: "none", WebkitAppearance: "none", WebkitTextSizeAdjust: "100%" };
-    var p = Object.assign({}, props);
-    delete p.dark;
-    if (!p.autoComplete) p.autoComplete = "off";
-    if (!p.autoCorrect) p.autoCorrect = "off";
-    if (!p.autoCapitalize) p.autoCapitalize = "off";
-    p.spellCheck = false;
-    return React.createElement("input", Object.assign({ style: style }, p));
-  }
-
-  function Btn(props) {
-    var bgMap = { primary: C.primary, danger: C.danger, success: C.success, dark: C.sidebar, outline: "transparent" };
-    var bg = bgMap[props.variant] || C.primary;
-    return React.createElement("button", { onClick: props.onClick, disabled: props.disabled, style: { background: bg, color: props.variant === "outline" ? C.muted : "white", border: props.variant === "outline" ? "1.5px solid " + C.border : "none", borderRadius: 9, padding: props.small ? "8px 14px" : "11px 20px", fontFamily: "Poppins,sans-serif", fontSize: props.small ? 12 : 13, fontWeight: 600, cursor: props.disabled ? "not-allowed" : "pointer", opacity: props.disabled ? 0.6 : 1, whiteSpace: "nowrap", display: "inline-flex", alignItems: "center", gap: 6 } }, props.children);
-  }
-
-  function Badge(props) {
-    var colors = { pub: { bg: "#dcfce7", color: "#16a34a" }, draft: { bg: "#fef9c3", color: "#ca8a04" }, active: { bg: "#dcfce7", color: "#16a34a" }, disabled: { bg: "#fee2e2", color: "#dc2626" }, Demo: { bg: "#fce7f3", color: "#be185d" }, Basic: { bg: "#f1f5f9", color: "#475569" }, Pro: { bg: "#dbeafe", color: "#2563eb" }, Agency: { bg: "#fef3c7", color: "#d97706" }, AgencyUnlimited: { bg: "#f3e8ff", color: "#7c3aed" } };
-    var s = colors[props.type] || { bg: "#eef2ff", color: "#6366f1" };
-    return React.createElement("span", { style: { background: s.bg, color: s.color, fontSize: 10, fontWeight: 600, padding: "3px 9px", borderRadius: 20, display: "inline-flex", alignItems: "center", gap: 4 } },
-      React.createElement("span", { style: { width: 5, height: 5, borderRadius: "50%", background: "currentColor" } }),
-      props.children
-    );
-  }
 
   var totalPub = posts.filter(function(p) { return p.status === "published"; }).length;
 
