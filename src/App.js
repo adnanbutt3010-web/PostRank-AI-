@@ -1006,10 +1006,9 @@ export default function App() {
     parts.push("body{font-family:Arial,sans-serif;color:#1a1a2e;-webkit-print-color-adjust:exact;print-color-adjust:exact}");
 
     if (hasLetterhead) {
-      // Letterhead mode - image as background/header
-      parts.push(".page{width:100%;min-height:100vh;position:relative}");
-      parts.push(".letterhead-img{width:100%;display:block;max-height:200px;object-fit:cover;object-position:top}");
-      parts.push(".content{padding:30px 40px}");
+      // Letterhead mode - full A4 page background image, content overlaid in the middle
+      parts.push(".page{width:210mm;min-height:297mm;position:relative;background-image:url('" + lh + "');background-size:210mm 297mm;background-repeat:no-repeat;background-position:top center;margin:0 auto;-webkit-print-color-adjust:exact;print-color-adjust:exact}");
+      parts.push(".content{padding:230px 50px 170px}");
     } else {
       // Default header
       parts.push(".page{width:100%;min-height:100vh}");
@@ -1034,8 +1033,7 @@ export default function App() {
     parts.push("</style></head><body><div class='page'>");
 
     if (hasLetterhead) {
-      // Show letterhead image at top
-      parts.push("<img src='" + lh + "' class='letterhead-img' alt='Letterhead' />");
+      // Letterhead is now the page background (set via CSS) - just open content wrapper
       parts.push("<div class='content'>");
       // Invoice title bar
       parts.push("<div style='display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:20px;padding-bottom:16px;border-bottom:2px solid #e2e8f0'>");
@@ -1089,7 +1087,7 @@ export default function App() {
     parts.push("<div style='font-weight:700;font-size:13px'>" + COMPANY_INFO.founder + "</div>");
     parts.push("<div style='font-size:11px;color:#64748b'>" + COMPANY_INFO.title + " | " + COMPANY_INFO.name + "</div></div></div>");
 
-    // Footer
+    // Footer (only shown when no letterhead - letterhead's own footer design shows via background image)
     if (!hasLetterhead) {
       parts.push("<div class='ftr'>" + COMPANY_INFO.name + " | " + COMPANY_INFO.email + " | " + COMPANY_INFO.phone + " | " + COMPANY_INFO.website + "</div>");
     }
@@ -1191,7 +1189,7 @@ export default function App() {
         authSuccess ? React.createElement("div", { style: ss.sucbx }, authSuccess) : null,
         authTab === "login"
           ? React.createElement("div", null,
-              React.createElement("div", { style: ss.fmgroup }, React.createElement("label", { style: ss.fmlabel }, "Username or Email"), React.createElement("input", { type: "text", placeholder: "admin or your@email.com", value: loginEmail, onChange: function(e) { setLoginEmail(e.target.value); }, onKeyDown: function(e) { if (e.key === "Enter") handleLogin(); }, autoComplete: "username", autoCorrect: "off", autoCapitalize: "off", spellCheck: false, style: { width: "100%", background: "#f8fafc", border: "1.5px solid #e2e8f0", borderRadius: 9, padding: "11px 14px", fontFamily: "Inter,sans-serif", fontSize: 16, color: "#0f172a", outline: "none", WebkitAppearance: "none" } })),
+              React.createElement("div", { style: ss.fmgroup }, React.createElement("label", { style: ss.fmlabel }, "Username or Email"), React.createElement("input", { type: "text", placeholder: "your@email.com", value: loginEmail, onChange: function(e) { setLoginEmail(e.target.value); }, onKeyDown: function(e) { if (e.key === "Enter") handleLogin(); }, autoComplete: "username", autoCorrect: "off", autoCapitalize: "off", spellCheck: false, style: { width: "100%", background: "#f8fafc", border: "1.5px solid #e2e8f0", borderRadius: 9, padding: "11px 14px", fontFamily: "Inter,sans-serif", fontSize: 16, color: "#0f172a", outline: "none", WebkitAppearance: "none" } })),
               React.createElement("div", { style: ss.fmgroup }, React.createElement("label", { style: ss.fmlabel }, "Password"), React.createElement("input", { type: "password", placeholder: "your password", value: loginPw, onChange: function(e) { setLoginPw(e.target.value); }, onKeyDown: function(e) { if (e.key === "Enter") handleLogin(); }, autoComplete: "current-password", style: { width: "100%", background: "#f8fafc", border: "1.5px solid #e2e8f0", borderRadius: 9, padding: "11px 14px", fontFamily: "Inter,sans-serif", fontSize: 16, color: "#0f172a", outline: "none", WebkitAppearance: "none" } })),
               React.createElement(Btn, { variant: "primary", onClick: handleLogin, disabled: authLoading }, authLoading ? "Logging in..." : "Login"),
               React.createElement("div", { style: { fontSize: 11, color: C.muted, textAlign: "center", marginTop: 14 } }, "Admin login: username 'admin'")
