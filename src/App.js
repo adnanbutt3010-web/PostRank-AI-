@@ -1007,8 +1007,8 @@ export default function App() {
 
     if (hasLetterhead) {
       // Letterhead mode - full A4 page background image, content overlaid in the middle
-      parts.push(".page{width:210mm;min-height:297mm;position:relative;background-image:url('" + lh + "');background-size:210mm 297mm;background-repeat:no-repeat;background-position:top center;margin:0 auto;-webkit-print-color-adjust:exact;print-color-adjust:exact}");
-      parts.push(".content{padding:230px 50px 170px}");
+      parts.push(".page{width:210mm;height:297mm;overflow:hidden;position:relative;background-image:url('" + lh + "');background-size:210mm 297mm;background-repeat:no-repeat;background-position:top center;margin:0 auto;-webkit-print-color-adjust:exact;print-color-adjust:exact}");
+      parts.push(".content{padding:210px 50px 150px;box-sizing:border-box;height:297mm}");
     } else {
       // Default header
       parts.push(".page{width:100%;min-height:100vh}");
@@ -1030,6 +1030,7 @@ export default function App() {
     parts.push(".sig-box{text-align:center;border-top:2px solid #334155;padding-top:10px;min-width:180px}");
     parts.push(".ftr{background:#f8fafc;padding:18px 40px;border-top:3px solid #6366f1;text-align:center;font-size:11px;color:#475569;margin-top:20px}");
     parts.push("@media print{body{-webkit-print-color-adjust:exact;print-color-adjust:exact}.no-print{display:none}}");
+    parts.push("@page{size:A4;margin:0}");
     parts.push("</style></head><body><div class='page'>");
 
     if (hasLetterhead) {
