@@ -646,25 +646,25 @@ export default function App() {
         setProfile(updatedProf);
         localStorage.setItem("pr_prof", JSON.stringify(updatedProf));
       }
-      _loadCreditsWithPlan(userId, latestPlan);
+      _loadCreditsWithPlan(userId, latestPlan, userEmail);
     }).catch(function() {
-      _loadCreditsWithPlan(userId, (profile && profile.plan) || "Basic");
+      _loadCreditsWithPlan(userId, (profile && profile.plan) || "Basic", userEmail);
     });
   }
 
-  function _loadCreditsWithPlan(userId, plan) {
+  function _loadCreditsWithPlan(userId, plan, userEmail) {
     var limit = PLAN_LIMITS[plan] || 5;
     var isUnlim = plan === "AgencyUnlimited";
     dbAPI.select("credits", "user_id=eq." + userId, SUPA_KEY).then(function(data) {
       if (data && data[0]) {
-        var rec = Object.assign({}, data[0], { plan: plan, total_credits: limit, is_unlimited: isUnlim });
+        var rec = Object.assign({}, data[0], { plan: plan, total_credits: limit, is_unlimited: isUnlim, email: userEmail });
         setCredits(rec);
-        // Update DB with correct plan/limits
-        dbAPI.update("credits", "user_id=eq." + userId, { plan: plan, total_credits: limit, is_unlimited: isUnlim }, SUPA_KEY).catch(function(){});
+        // Update DB with correct plan/limits and email (so admin can look up usage by email)
+        dbAPI.update("credits", "user_id=eq." + userId, { plan: plan, total_credits: limit, is_unlimited: isUnlim, email: userEmail }, SUPA_KEY).catch(function(){});
       } else {
         var rec = {
           user_id: userId, plan: plan, total_credits: limit,
-          used_credits: 0, is_unlimited: isUnlim,
+          used_credits: 0, is_unlimited: isUnlim, email: userEmail,
           reset_date: new Date(new Date().getFullYear(), new Date().getMonth() + 1, 1).toISOString().split("T")[0],
           created_at: new Date().toISOString(),
         };
@@ -715,8 +715,21 @@ export default function App() {
   function loadClients() {
     if (!session || !isAdmin) return;
     setClientsLoading(true);
-    dbAPI.select("clients", "", SUPA_KEY).then(function(data) {
-      setClients(data);
+    Promise.all([
+      dbAPI.select("clients", "", SUPA_KEY),
+      dbAPI.select("credits", "", SUPA_KEY).catch(function() { return []; })
+    ]).then(function(results) {
+      var clientsData = results[0];
+      var creditsData = results[1] || [];
+      var merged = clientsData.map(function(c) {
+        var cr = creditsData.find(function(x) { return x.email && c.email && x.email.toLowerCase() === c.email.toLowerCase(); });
+        return Object.assign({}, c, {
+          used_credits: cr ? (cr.used_credits || 0) : null,
+          total_credits: cr ? cr.total_credits : null,
+          is_unlimited: cr ? cr.is_unlimited : false,
+        });
+      });
+      setClients(merged);
     }).catch(function() {
       setClients([]);
     }).finally(function() { setClientsLoading(false); });
@@ -1453,16 +1466,22 @@ export default function App() {
           " - Client can Sign Up -> Login -> Use their dashboard!"
         ),
         React.createElement("div", { style: ss.tbl },
-          React.createElement("div", { style: Object.assign({}, ss.tblhead, { gridTemplateColumns: "2fr 1fr 1fr 1fr 1.5fr" }) },
-            React.createElement("div", null, "Client"), React.createElement("div", null, "Plan"), React.createElement("div", null, "Joined"), React.createElement("div", null, "Status"), React.createElement("div", null, "Actions")
+          React.createElement("div", { style: Object.assign({}, ss.tblhead, { gridTemplateColumns: "2fr 1fr 1fr 1fr 1fr 1.5fr" }) },
+            React.createElement("div", null, "Client"), React.createElement("div", null, "Plan"), React.createElement("div", null, "Credits Used"), React.createElement("div", null, "Joined"), React.createElement("div", null, "Status"), React.createElement("div", null, "Actions")
           ),
           clientsLoading ? React.createElement("div", { style: { textAlign: "center", padding: 28, color: C.muted } }, "Loading clients...") :
           clients.length === 0 ? React.createElement("div", { style: { textAlign: "center", padding: 28, color: C.muted } }, "No clients yet. Click Add Client to get started!") :
           clients.map(function(c) {
             var isActive = c.status === "active";
-            return React.createElement("div", { key: c.id, style: Object.assign({}, ss.tblrow, { gridTemplateColumns: "2fr 1fr 1fr 1fr 1.5fr" }) },
+            var creditsLabel = c.used_credits === null || c.used_credits === undefined
+              ? React.createElement("span", { style: { fontSize: 11, color: C.muted, fontStyle: "italic" } }, "Not logged in yet")
+              : c.is_unlimited
+                ? React.createElement("span", { style: { fontSize: 12, fontWeight: 700, color: C.primary } }, c.used_credits + " used")
+                : React.createElement("span", { style: { fontSize: 12, fontWeight: 700, color: (c.used_credits >= (c.total_credits || 0)) ? C.danger : C.ink } }, c.used_credits + " / " + (c.total_credits || 0));
+            return React.createElement("div", { key: c.id, style: Object.assign({}, ss.tblrow, { gridTemplateColumns: "2fr 1fr 1fr 1fr 1fr 1.5fr" }) },
               React.createElement("div", null, React.createElement("div", { style: { fontWeight: 600 } }, c.name || c.email), React.createElement("div", { style: { fontSize: 11, color: C.muted } }, c.email)),
               React.createElement("div", null, React.createElement(Badge, { type: c.plan || "Basic" }, c.plan || "Basic")),
+              creditsLabel,
               React.createElement("div", { style: { fontSize: 11, color: C.muted } }, c.created_at ? new Date(c.created_at).toLocaleDateString() : "-"),
               React.createElement(Badge, { type: isActive ? "active" : "disabled" }, isActive ? "Active" : "Disabled"),
               React.createElement("div", { style: { display: "flex", gap: 5, flexWrap: "wrap" } },
