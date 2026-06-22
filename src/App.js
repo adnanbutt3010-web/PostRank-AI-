@@ -681,7 +681,7 @@ export default function App() {
     if (session && !isAdmin && profile && profile.plan) {
       loadCredits();
     }
-  }, [session, profile && profile.plan]);
+  }, [session, profile && profile.plan, view]);
 
   function getRemainingCredits() {
     var plan = (profile && profile.plan) || "Basic";
