@@ -727,6 +727,7 @@ export default function App() {
           used_credits: cr ? (cr.used_credits || 0) : null,
           total_credits: cr ? cr.total_credits : null,
           is_unlimited: cr ? cr.is_unlimited : false,
+          reset_date: cr ? cr.reset_date : null,
         });
       });
       setClients(merged);
@@ -1475,9 +1476,12 @@ export default function App() {
             var isActive = c.status === "active";
             var creditsLabel = c.used_credits === null || c.used_credits === undefined
               ? React.createElement("span", { style: { fontSize: 11, color: C.muted, fontStyle: "italic" } }, "Not logged in yet")
-              : c.is_unlimited
-                ? React.createElement("span", { style: { fontSize: 12, fontWeight: 700, color: C.primary } }, c.used_credits + " used")
-                : React.createElement("span", { style: { fontSize: 12, fontWeight: 700, color: (c.used_credits >= (c.total_credits || 0)) ? C.danger : C.ink } }, c.used_credits + " / " + (c.total_credits || 0));
+              : React.createElement("div", null,
+                  c.is_unlimited
+                    ? React.createElement("span", { style: { fontSize: 12, fontWeight: 700, color: C.primary } }, c.used_credits + " used")
+                    : React.createElement("span", { style: { fontSize: 12, fontWeight: 700, color: (c.used_credits >= (c.total_credits || 0)) ? C.danger : C.ink } }, c.used_credits + " / " + (c.total_credits || 0)),
+                  c.reset_date ? React.createElement("div", { style: { fontSize: 10, color: C.muted, marginTop: 2 } }, "Resets " + c.reset_date) : null
+                );
             return React.createElement("div", { key: c.id, style: Object.assign({}, ss.tblrow, { gridTemplateColumns: "2fr 1fr 1fr 1fr 1fr 1.5fr" }) },
               React.createElement("div", null, React.createElement("div", { style: { fontWeight: 600 } }, c.name || c.email), React.createElement("div", { style: { fontSize: 11, color: C.muted } }, c.email)),
               React.createElement("div", null, React.createElement(Badge, { type: c.plan || "Basic" }, c.plan || "Basic")),
@@ -1495,6 +1499,18 @@ export default function App() {
                     notify("Plan updated to: " + np);
                   }
                 }, style: { border: "none", borderRadius: 6, padding: "5px 10px", fontSize: 11, cursor: "pointer", fontWeight: 600, background: "#fef3c7", color: "#d97706" } }, "Plan"),
+                c.used_credits !== null && c.used_credits !== undefined ? React.createElement("button", { onClick: function() {
+                  if (!window.confirm("Reset credits for " + (c.name || c.email) + "?")) return;
+                  var nextReset = new Date(new Date().getFullYear(), new Date().getMonth() + 1, 1).toISOString().split("T")[0];
+                  fetch(SUPA_URL + "/rest/v1/credits?email=eq." + encodeURIComponent(c.email), {
+                    method: "PATCH",
+                    headers: { apikey: SUPA_KEY, Authorization: "Bearer " + SUPA_KEY, "Content-Type": "application/json" },
+                    body: JSON.stringify({ used_credits: 0, reset_date: nextReset })
+                  }).then(function() {
+                    setClients(function(prev) { return prev.map(function(x) { return x.id === c.id ? Object.assign({}, x, { used_credits: 0, reset_date: nextReset }) : x; }); });
+                    notify("Credits reset for " + (c.name || c.email) + "!");
+                  }).catch(function() { notify("Reset failed.", true); });
+                }, style: { border: "none", borderRadius: 6, padding: "5px 10px", fontSize: 11, cursor: "pointer", fontWeight: 600, background: "#dcfce7", color: "#16a34a" } }, "Reset Credits") : null,
                 React.createElement("button", { onClick: function() { handleDeleteClient(c.id); }, style: { border: "none", borderRadius: 6, padding: "5px 10px", fontSize: 11, cursor: "pointer", fontWeight: 600, background: "#fee2e2", color: "#dc2626", minWidth: 50 } }, "Delete")
               )
             );
