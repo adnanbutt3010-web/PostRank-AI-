@@ -1502,14 +1502,25 @@ export default function App() {
                 c.used_credits !== null && c.used_credits !== undefined ? React.createElement("button", { onClick: function() {
                   if (!window.confirm("Reset credits for " + (c.name || c.email) + "?")) return;
                   var nextReset = new Date(new Date().getFullYear(), new Date().getMonth() + 1, 1).toISOString().split("T")[0];
+                  notify("Resetting...");
                   fetch(SUPA_URL + "/rest/v1/credits?email=eq." + encodeURIComponent(c.email), {
                     method: "PATCH",
-                    headers: { apikey: SUPA_KEY, Authorization: "Bearer " + SUPA_KEY, "Content-Type": "application/json" },
+                    headers: { apikey: SUPA_KEY, Authorization: "Bearer " + SUPA_KEY, "Content-Type": "application/json", Prefer: "return=representation" },
                     body: JSON.stringify({ used_credits: 0, reset_date: nextReset })
-                  }).then(function() {
+                  }).then(function(r) {
+                    if (!r.ok) { return r.text().then(function(t) { throw new Error("HTTP " + r.status + ": " + t); }); }
+                    return r.json();
+                  }).then(function(updated) {
+                    if (!updated || updated.length === 0) {
+                      notify("No matching credits row for " + c.email + ". Ask them to log in once first.", true);
+                      return;
+                    }
                     setClients(function(prev) { return prev.map(function(x) { return x.id === c.id ? Object.assign({}, x, { used_credits: 0, reset_date: nextReset }) : x; }); });
                     notify("Credits reset for " + (c.name || c.email) + "!");
-                  }).catch(function() { notify("Reset failed.", true); });
+                  }).catch(function(e) {
+                    console.error("Reset credits error:", e);
+                    notify("Reset failed: " + e.message, true);
+                  });
                 }, style: { border: "none", borderRadius: 6, padding: "5px 10px", fontSize: 11, cursor: "pointer", fontWeight: 600, background: "#dcfce7", color: "#16a34a" } }, "Reset Credits") : null,
                 React.createElement("button", { onClick: function() { handleDeleteClient(c.id); }, style: { border: "none", borderRadius: 6, padding: "5px 10px", fontSize: 11, cursor: "pointer", fontWeight: 600, background: "#fee2e2", color: "#dc2626", minWidth: 50 } }, "Delete")
               )
