@@ -5,6 +5,9 @@ const SUPA_KEY = "sb_publishable_Bz5xRPDQ_ZDE99T_QRSLlg_UKLH-6b6";
 const ADMIN_EMAIL = "adnanbutt3010@gmail.com";
 const ADMIN_USER = "admin";
 const ADMIN_PASS = "Pst@2026";
+const GROQ_API_KEY = "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";
+const GROQ_URL = "https://api.groq.com/openai/v1/chat/completions";
+const GROQ_MODEL = "llama-3.3-70b-versatile";
 // Plan credit limits
 const PLAN_LIMITS = {
   Demo: 5,
@@ -302,6 +305,67 @@ function generateSEO(title, price, seoType, postType) {
     seoType: seoType,
     postType: postType,
   };
+}
+
+// Uses Groq AI to generate unique, product-specific SEO content.
+// Falls back to the template-based generateSEO() on any failure (rate limit, network error, bad response, etc.)
+// so the user always gets a result even if the AI call doesn't work.
+async function generateSEOWithAI(title, price, seoType, postType) {
+  var fallback = generateSEO(title, price, seoType, postType);
+  try {
+    var isLocal = seoType === "local";
+    var isBlog = postType === "blog";
+    var yr = new Date().getFullYear();
+
+    var systemPrompt = "You are an expert SEO copywriter. You write unique, persuasive, natural-sounding product and blog content for an e-commerce SEO tool. Always respond with ONLY valid JSON, no markdown fences, no preamble, matching this exact schema: " +
+      "{\"seoTitle\":\"string\",\"description\":\"string (200+ words, plain text, paragraphs separated by \\n\\n)\",\"metaDescription\":\"string (max 155 chars)\",\"keywords\":[\"array of 8 strings\"],\"hashtags\":[\"array of 6 strings starting with #\"],\"cta\":\"string (short call to action)\",\"permalink\":\"string (lowercase-dashed-slug)\"}";
+
+    var userPrompt = (isBlog ? "Write a blog post" : "Write a product listing") + " about: \"" + title + "\". " +
+      "Price/keyword: " + price + ". " +
+      "Target market: " + (isLocal ? "Pakistan (mention local cities, PKR pricing, cash on delivery where relevant)" : "international/global audience") + ". " +
+      "Year: " + yr + ". Make the description genuinely specific to this exact product (not generic filler), engaging, and free of repeated boilerplate phrasing.";
+
+    var resp = await fetch(GROQ_URL, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: "Bearer " + GROQ_API_KEY },
+      body: JSON.stringify({
+        model: GROQ_MODEL,
+        messages: [
+          { role: "system", content: systemPrompt },
+          { role: "user", content: userPrompt }
+        ],
+        temperature: 0.85,
+        max_tokens: 1500,
+        response_format: { type: "json_object" }
+      })
+    });
+
+    if (!resp.ok) throw new Error("Groq API error: " + resp.status);
+    var data = await resp.json();
+    var raw = data.choices && data.choices[0] && data.choices[0].message && data.choices[0].message.content;
+    if (!raw) throw new Error("Empty Groq response");
+    var parsed = JSON.parse(raw);
+
+    if (!parsed.seoTitle || !parsed.description) throw new Error("Incomplete AI response");
+
+    return {
+      seoTitle: parsed.seoTitle,
+      description: parsed.description,
+      metaDescription: parsed.metaDescription || fallback.metaDescription,
+      snippet: (parsed.metaDescription || fallback.metaDescription).slice(0, 150),
+      keywords: (parsed.keywords && parsed.keywords.length ? parsed.keywords : fallback.keywords).slice(0, 8),
+      hashtags: (parsed.hashtags && parsed.hashtags.length ? parsed.hashtags : fallback.hashtags).slice(0, 6),
+      altTexts: fallback.altTexts,
+      permalink: parsed.permalink || fallback.permalink,
+      cta: parsed.cta || fallback.cta,
+      seoType: seoType,
+      postType: postType,
+      aiGenerated: true,
+    };
+  } catch (e) {
+    console.warn("Groq AI generation failed, using template fallback:", e.message);
+    return Object.assign({}, fallback, { aiGenerated: false });
+  }
 }
 
 
@@ -755,13 +819,13 @@ export default function App() {
       }
     }
     setGenError(""); setGenerating(true); setGenerated(null); setSaved(false); setPublished(false); setUploadedImages([]); setImageAlts([]);
-    setTimeout(function() {
-      try {
-        var r = generateSEO(productTitle, productPrice, seoType, postType);
-        setGenerated(Object.assign({}, r, { product: productTitle, price: productPrice }));
-      } catch(e) { setGenError("Error: " + e.message); }
+    generateSEOWithAI(productTitle, productPrice, seoType, postType).then(function(r) {
+      setGenerated(Object.assign({}, r, { product: productTitle, price: productPrice }));
+    }).catch(function(e) {
+      setGenError("Error: " + e.message);
+    }).finally(function() {
       setGenerating(false);
-    }, 1200);
+    });
   }
 
   function handleSave() {
@@ -1196,33 +1260,14 @@ export default function App() {
       React.createElement("div", { style: { background: "white", borderRadius: 20, padding: 40, width: "100%", maxWidth: 420, boxShadow: "0 20px 60px rgba(0,0,0,0.3)" } },
         React.createElement("div", { style: { fontFamily: "Poppins,sans-serif", fontWeight: 800, fontSize: 22, color: C.primary, marginBottom: 4 } }, "PostRank AI"),
         React.createElement("div", { style: { fontSize: 12, color: C.muted, marginBottom: 28 } }, "SEO Automation Platform"),
-        React.createElement("div", { style: { display: "flex", background: C.bg, borderRadius: 10, padding: 4, marginBottom: 24 } },
-          React.createElement("button", { onClick: function() { setAuthTab("login"); setAuthError(""); }, style: { flex: 1, padding: 9, border: "none", borderRadius: 8, fontFamily: "Inter,sans-serif", fontSize: 13, fontWeight: authTab === "login" ? 600 : 400, cursor: "pointer", background: authTab === "login" ? "white" : "transparent", color: authTab === "login" ? C.primary : C.muted } }, "Login"),
-          React.createElement("button", { onClick: function() { setAuthTab("register"); setAuthError(""); }, style: { flex: 1, padding: 9, border: "none", borderRadius: 8, fontFamily: "Inter,sans-serif", fontSize: 13, fontWeight: authTab === "register" ? 600 : 400, cursor: "pointer", background: authTab === "register" ? "white" : "transparent", color: authTab === "register" ? C.primary : C.muted } }, "Sign Up")
-        ),
         authError ? React.createElement("div", { style: ss.errbx }, authError) : null,
         authSuccess ? React.createElement("div", { style: ss.sucbx }, authSuccess) : null,
-        authTab === "login"
-          ? React.createElement("div", null,
-              React.createElement("div", { style: ss.fmgroup }, React.createElement("label", { style: ss.fmlabel }, "Username or Email"), React.createElement("input", { type: "text", placeholder: "your@email.com", value: loginEmail, onChange: function(e) { setLoginEmail(e.target.value); }, onKeyDown: function(e) { if (e.key === "Enter") handleLogin(); }, autoComplete: "username", autoCorrect: "off", autoCapitalize: "off", spellCheck: false, style: { width: "100%", background: "#f8fafc", border: "1.5px solid #e2e8f0", borderRadius: 9, padding: "11px 14px", fontFamily: "Inter,sans-serif", fontSize: 16, color: "#0f172a", outline: "none", WebkitAppearance: "none" } })),
-              React.createElement("div", { style: ss.fmgroup }, React.createElement("label", { style: ss.fmlabel }, "Password"), React.createElement("input", { type: "password", placeholder: "your password", value: loginPw, onChange: function(e) { setLoginPw(e.target.value); }, onKeyDown: function(e) { if (e.key === "Enter") handleLogin(); }, autoComplete: "current-password", style: { width: "100%", background: "#f8fafc", border: "1.5px solid #e2e8f0", borderRadius: 9, padding: "11px 14px", fontFamily: "Inter,sans-serif", fontSize: 16, color: "#0f172a", outline: "none", WebkitAppearance: "none" } })),
-              React.createElement(Btn, { variant: "primary", onClick: handleLogin, disabled: authLoading }, authLoading ? "Logging in..." : "Login"),
-              React.createElement("div", { style: { fontSize: 11, color: C.muted, textAlign: "center", marginTop: 14 } }, "Admin login: username 'admin'")
-            )
-          : React.createElement("div", null,
-              React.createElement("div", { style: ss.fmgroup }, React.createElement("label", { style: ss.fmlabel }, "Full Name"), React.createElement("input", { type: "text", placeholder: "Your full name", value: regName, onChange: function(e) { setRegName(e.target.value); }, autoCorrect: "off", autoCapitalize: "words", style: { width: "100%", background: "#f8fafc", border: "1.5px solid #e2e8f0", borderRadius: 9, padding: "11px 14px", fontFamily: "Inter,sans-serif", fontSize: 16, color: "#0f172a", outline: "none" } })),
-              React.createElement("div", { style: ss.fmgroup }, React.createElement("label", { style: ss.fmlabel }, "Email"), React.createElement("input", { type: "email", placeholder: "your@email.com", value: regEmail, onChange: function(e) { setRegEmail(e.target.value); }, autoComplete: "email", autoCapitalize: "off", style: { width: "100%", background: "#f8fafc", border: "1.5px solid #e2e8f0", borderRadius: 9, padding: "11px 14px", fontFamily: "Inter,sans-serif", fontSize: 16, color: "#0f172a", outline: "none" } })),
-              React.createElement("div", { style: ss.fmgroup }, React.createElement("label", { style: ss.fmlabel }, "Password"), React.createElement("input", { type: "password", placeholder: "Min 6 characters", value: regPw, onChange: function(e) { setRegPw(e.target.value); }, autoComplete: "new-password", style: { width: "100%", background: "#f8fafc", border: "1.5px solid #e2e8f0", borderRadius: 9, padding: "11px 14px", fontFamily: "Inter,sans-serif", fontSize: 16, color: "#0f172a", outline: "none" } })),
-              React.createElement("div", { style: ss.fmgroup }, React.createElement("label", { style: ss.fmlabel }, "Plan"),
-                React.createElement("select", { value: regPlan, onChange: function(e) { setRegPlan(e.target.value); }, style: { width: "100%", background: C.bg, border: "1.5px solid " + C.border, borderRadius: 9, padding: "11px 14px", fontFamily: "Inter,sans-serif", fontSize: 16 } },
-                  React.createElement("option", { value: "Demo" }, "Demo - Free (5 credits trial)"),
-                  React.createElement("option", { value: "Basic" }, "Basic - $19/mo (50 credits)"),
-                  React.createElement("option", { value: "Pro" }, "Pro - $49/mo (250 credits)"),
-                  React.createElement("option", { value: "Agency" }, "Agency - $149/mo (1500 credits)")
-                )
-              ),
-              React.createElement(Btn, { variant: "primary", onClick: handleRegister, disabled: authLoading }, authLoading ? "Creating account..." : "Create Account")
-            )
+        React.createElement("div", null,
+          React.createElement("div", { style: ss.fmgroup }, React.createElement("label", { style: ss.fmlabel }, "Username or Email"), React.createElement("input", { type: "text", placeholder: "your@email.com", value: loginEmail, onChange: function(e) { setLoginEmail(e.target.value); }, onKeyDown: function(e) { if (e.key === "Enter") handleLogin(); }, autoComplete: "username", autoCorrect: "off", autoCapitalize: "off", spellCheck: false, style: { width: "100%", background: "#f8fafc", border: "1.5px solid #e2e8f0", borderRadius: 9, padding: "11px 14px", fontFamily: "Inter,sans-serif", fontSize: 16, color: "#0f172a", outline: "none", WebkitAppearance: "none" } })),
+          React.createElement("div", { style: ss.fmgroup }, React.createElement("label", { style: ss.fmlabel }, "Password"), React.createElement("input", { type: "password", placeholder: "your password", value: loginPw, onChange: function(e) { setLoginPw(e.target.value); }, onKeyDown: function(e) { if (e.key === "Enter") handleLogin(); }, autoComplete: "current-password", style: { width: "100%", background: "#f8fafc", border: "1.5px solid #e2e8f0", borderRadius: 9, padding: "11px 14px", fontFamily: "Inter,sans-serif", fontSize: 16, color: "#0f172a", outline: "none", WebkitAppearance: "none" } })),
+          React.createElement(Btn, { variant: "primary", onClick: handleLogin, disabled: authLoading }, authLoading ? "Logging in..." : "Login"),
+          React.createElement("div", { style: { fontSize: 11, color: C.muted, textAlign: "center", marginTop: 14 } }, "Admin login: username 'admin'")
+        )
       )
     );
   }
@@ -1304,7 +1349,7 @@ export default function App() {
         generated && React.createElement("div", { style: { background: C.card, border: "1px solid " + C.border, borderRadius: 14, overflow: "hidden", marginBottom: 20 } },
           React.createElement("div", { style: { background: "#1e293b", padding: "14px 20px", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, flexWrap: "wrap" } },
             React.createElement("div", { style: { display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" } },
-              React.createElement("span", { style: { background: C.primary, color: "white", fontSize: 10, fontWeight: 600, padding: "3px 10px", borderRadius: 20 } }, "AI Generated"),
+              React.createElement("span", { style: { background: generated.aiGenerated === false ? C.muted : C.primary, color: "white", fontSize: 10, fontWeight: 600, padding: "3px 10px", borderRadius: 20 } }, generated.aiGenerated === false ? "Template (AI unavailable)" : "AI Generated"),
               React.createElement("span", { style: { background: generated.postType === "blog" ? C.warning : C.primary, color: "white", fontSize: 10, padding: "3px 10px", borderRadius: 20 } }, generated.postType === "blog" ? "Blog" : "Product"),
               React.createElement("span", { style: { background: "#334155", color: "#94a3b8", fontSize: 10, padding: "3px 10px", borderRadius: 20 } }, generated.seoType === "local" ? "Pakistan" : "International"),
               React.createElement("span", { style: { fontSize: 13, color: "#e2e8f0", fontWeight: 600 } }, generated.product)
@@ -1464,7 +1509,7 @@ export default function App() {
         React.createElement("div", { style: Object.assign({}, ss.infobx, { marginBottom: 16 }) },
           React.createElement("strong", null, "Share this link with client: "),
           React.createElement("span", { style: { color: C.primary, fontWeight: 600 } }, typeof window !== "undefined" ? window.location.origin : "https://post-rank-ai.vercel.app"),
-          " - Client can Sign Up -> Login -> Use their dashboard!"
+          " - Client can Login -> Use their dashboard! (Admin must add the client first.)"
         ),
         React.createElement("div", { style: ss.tbl },
           React.createElement("div", { style: Object.assign({}, ss.tblhead, { gridTemplateColumns: "2fr 1fr 1fr 1fr 1fr 1.5fr" }) },
