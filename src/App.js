@@ -4,7 +4,6 @@ const SUPA_URL = "https://yizzvwyvdnkbbhvojqlp.supabase.co";
 const SUPA_KEY = "sb_publishable_Bz5xRPDQ_ZDE99T_QRSLlg_UKLH-6b6";
 const ADMIN_EMAIL = "adnanbutt3010@gmail.com";
 const ADMIN_USER = "admin";
-const ADMIN_PASS = "Pst@2026";
 const GROQ_API_KEY = "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";
 const GROQ_URL = "https://api.groq.com/openai/v1/chat/completions";
 const GROQ_MODEL = "llama-3.3-70b-versatile";
@@ -633,15 +632,24 @@ export default function App() {
     if (!loginEmail || !loginPw) { setAuthError("Username/Please enter email and password."); return; }
     setAuthLoading(true); setAuthError("");
 
-    // Admin direct login - username + password
-    if ((loginEmail === ADMIN_USER || loginEmail === ADMIN_EMAIL) && loginPw === ADMIN_PASS) {
-      var adminSess = { token: "admin_local_token", user: { id: "admin_001", email: ADMIN_EMAIL } };
-      var adminProf = { email: ADMIN_EMAIL, name: "Admin", role: "admin", plan: "Agency" };
-      setSession(adminSess); setProfile(adminProf);
-      localStorage.setItem("pr_sess", JSON.stringify(adminSess));
-      localStorage.setItem("pr_prof", JSON.stringify(adminProf));
-      setAuthLoading(false);
-      setView("generate");
+    // Allow typing 'admin' as a shortcut for the admin email, but always authenticate via real Supabase Auth.
+    var effectiveEmail = loginEmail === ADMIN_USER ? ADMIN_EMAIL : loginEmail;
+    var isAdminAttempt = effectiveEmail === ADMIN_EMAIL;
+
+    if (isAdminAttempt) {
+      authAPI.signIn(effectiveEmail, loginPw).then(function(d) {
+        if (!d || !d.access_token) throw new Error("Login failed - check email/password");
+        var adminSess = { token: d.access_token, user: d.user || { id: "admin", email: ADMIN_EMAIL } };
+        var adminProf = { email: ADMIN_EMAIL, name: "Admin", role: "admin", plan: "Agency" };
+        setSession(adminSess); setProfile(adminProf);
+        localStorage.setItem("pr_sess", JSON.stringify(adminSess));
+        localStorage.setItem("pr_prof", JSON.stringify(adminProf));
+        setView("generate");
+      }).catch(function(e) {
+        setAuthError(e.message || "Login failed");
+      }).finally(function() {
+        setAuthLoading(false);
+      });
       return;
     }
 
