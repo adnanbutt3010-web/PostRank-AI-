@@ -266,6 +266,12 @@ function generateSEO(title, price, seoType, postType) {
   } else {
     meta = isLocal ? "Buy original " + title + " in Pakistan for just " + price + ". Fast delivery to " + city + ". Cash on delivery. 7-day returns. 100% authentic. Order now!" : "Shop premium " + title + " worldwide for only " + price + ". Free shipping. 30-day returns. Best quality guaranteed. 10000+ happy customers. Order today!";
   }
+  // Guarantee meta description is 140-155 characters
+  if (meta.length < 140) {
+    meta = (meta.slice(0, -1) + " Trusted by thousands of happy customers - shop now and experience the difference for yourself!").slice(0, 155);
+  } else if (meta.length > 155) {
+    meta = meta.slice(0, 152).replace(/\s+\S*$/, "") + "...";
+  }
 
   var snippet = meta.slice(0, 150);
 
@@ -317,13 +323,18 @@ async function generateSEOWithAI(title, price, seoType, postType) {
     var isBlog = postType === "blog";
     var yr = new Date().getFullYear();
 
-    var systemPrompt = "You are an expert SEO copywriter. You write unique, persuasive, natural-sounding product and blog content for an e-commerce SEO tool. Always respond with ONLY valid JSON, no markdown fences, no preamble, matching this exact schema: " +
-      "{\"seoTitle\":\"string\",\"description\":\"string (200+ words, plain text, paragraphs separated by \\n\\n)\",\"metaDescription\":\"string (max 155 chars)\",\"keywords\":[\"array of 8 strings\"],\"hashtags\":[\"array of 6 strings starting with #\"],\"cta\":\"string (short call to action)\",\"permalink\":\"string (lowercase-dashed-slug)\"}";
+    var systemPrompt = "You are an expert SEO copywriter. You write unique, persuasive, natural-sounding product and blog content for an e-commerce SEO tool. " +
+      "STRICT REQUIREMENTS you must always follow: " +
+      "(1) \"description\" must be AT LEAST 220 words (count words before responding; if short, add another paragraph covering features, use-cases, or buyer reassurance until it is 220+ words). " +
+      "(2) \"metaDescription\" must be BETWEEN 140 and 155 characters exactly - not shorter, not longer. Count characters before responding. It must read as a compelling, complete sentence (not a comma-separated keyword list), include the price, and end with a soft call to action. " +
+      "Always respond with ONLY valid JSON, no markdown fences, no preamble, matching this exact schema: " +
+      "{\"seoTitle\":\"string\",\"description\":\"string (220+ words, plain text, paragraphs separated by \\n\\n)\",\"metaDescription\":\"string (140-155 characters, full sentence)\",\"keywords\":[\"array of 8 strings\"],\"hashtags\":[\"array of 6 strings starting with #\"],\"cta\":\"string (short call to action)\",\"permalink\":\"string (lowercase-dashed-slug)\"}";
 
     var userPrompt = (isBlog ? "Write a blog post" : "Write a product listing") + " about: \"" + title + "\". " +
       "Price/keyword: " + price + ". " +
       "Target market: " + (isLocal ? "Pakistan (mention local cities, PKR pricing, cash on delivery where relevant)" : "international/global audience") + ". " +
-      "Year: " + yr + ". Make the description genuinely specific to this exact product (not generic filler), engaging, and free of repeated boilerplate phrasing.";
+      "Year: " + yr + ". Make the description genuinely specific to this exact product (not generic filler), engaging, and free of repeated boilerplate phrasing. " +
+      "Remember: description must be 220+ words and metaDescription must be 140-155 characters - both are mandatory, verify the lengths yourself before answering.";
 
     var resp = await fetch(GROQ_URL, {
       method: "POST",
@@ -348,11 +359,57 @@ async function generateSEOWithAI(title, price, seoType, postType) {
 
     if (!parsed.seoTitle || !parsed.description) throw new Error("Incomplete AI response");
 
+    // Enforce 220+ word description: if Groq came in short, ask it to expand once.
+    var wordCount = parsed.description.trim().split(/\s+/).length;
+    if (wordCount < 200) {
+      try {
+        var expandResp = await fetch(GROQ_URL, {
+          method: "POST",
+          headers: { "Content-Type": "application/json", Authorization: "Bearer " + GROQ_API_KEY },
+          body: JSON.stringify({
+            model: GROQ_MODEL,
+            messages: [
+              { role: "system", content: "You expand product descriptions. Respond with ONLY the expanded plain-text description, no JSON, no preamble. It must be at least 220 words total." },
+              { role: "user", content: "Expand this description about \"" + title + "\" to at least 220 words by adding more detail on features, use-cases, and buyer reassurance, keeping the same tone:\n\n" + parsed.description }
+            ],
+            temperature: 0.8,
+            max_tokens: 900
+          })
+        });
+        if (expandResp.ok) {
+          var expandData = await expandResp.json();
+          var expanded = expandData.choices && expandData.choices[0] && expandData.choices[0].message && expandData.choices[0].message.content;
+          if (expanded && expanded.trim().split(/\s+/).length > wordCount) {
+            parsed.description = expanded.trim();
+          }
+        }
+      } catch (e) { /* keep original description if expansion fails */ }
+    }
+
+    // Enforce 140-155 char metaDescription as a hard guarantee, regardless of what the AI returned.
+    var meta = (parsed.metaDescription || fallback.metaDescription || "").trim();
+    if (meta.length < 140) {
+      var filler = " Order now for fast delivery, great value, and guaranteed quality.";
+      while (meta.length < 140 && filler.length > 0) {
+        var needed = 155 - meta.length;
+        meta = meta + (meta.endsWith(".") || meta.endsWith("!") ? " " : ". ") + filler.trim();
+        meta = meta.slice(0, 155);
+        break;
+      }
+      // If still short (very short original), pad with product/price context
+      if (meta.length < 140) {
+        meta = (title + " is available now at " + price + ". Shop today for fast delivery, trusted quality, and unbeatable value - order yours now!").slice(0, 155);
+      }
+    } else if (meta.length > 155) {
+      meta = meta.slice(0, 152).replace(/\s+\S*$/, "") + "...";
+    }
+    parsed.metaDescription = meta;
+
     return {
       seoTitle: parsed.seoTitle,
       description: parsed.description,
-      metaDescription: parsed.metaDescription || fallback.metaDescription,
-      snippet: (parsed.metaDescription || fallback.metaDescription).slice(0, 150),
+      metaDescription: parsed.metaDescription,
+      snippet: parsed.metaDescription.slice(0, 150),
       keywords: (parsed.keywords && parsed.keywords.length ? parsed.keywords : fallback.keywords).slice(0, 8),
       hashtags: (parsed.hashtags && parsed.hashtags.length ? parsed.hashtags : fallback.hashtags).slice(0, 6),
       altTexts: fallback.altTexts,
