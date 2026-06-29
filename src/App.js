@@ -628,6 +628,13 @@ export default function App() {
     setTimeout(function() { setToast(null); }, 3200);
   }
 
+  // RLS now requires authenticated requests for clients/credits/invoices.
+  // This returns the real logged-in session token when available, so admin/client actions
+  // are sent as authenticated requests instead of the public anon key.
+  function authToken() {
+    return (session && session.token) ? session.token : SUPA_KEY;
+  }
+
   function handleLogin() {
     if (!loginEmail || !loginPw) { setAuthError("Username/Please enter email and password."); return; }
     setAuthLoading(true); setAuthError("");
@@ -653,68 +660,56 @@ export default function App() {
       return;
     }
 
-    // Client login via Supabase - first check clients table for status BEFORE signing in
-    fetch(SUPA_URL + "/rest/v1/clients?email=eq." + encodeURIComponent(loginEmail) + "&select=plan,name,status", {
-      headers: { apikey: SUPA_KEY, Authorization: "Bearer " + SUPA_KEY }
-    }).then(function(r) { return r.json(); }).then(function(preCheck) {
-      if (!preCheck || preCheck.length === 0) {
-        throw new Error("Account not found. Please contact admin.");
-      }
-      if (preCheck[0].status === "disabled") {
-        throw new Error("Your account has been disabled. Please contact admin.");
-      }
-      return authAPI.signIn(loginEmail, loginPw);
-    }).then(function(d) {
+    // Client login via Supabase - sign in first to get an authenticated token (required by RLS),
+    // then check clients table status using that token; sign out again if disabled/not found.
+    authAPI.signIn(loginEmail, loginPw).then(function(d) {
       if (!d || !d.access_token) throw new Error("Login failed - check email/password");
       var user = d.user || {};
+      var token = d.access_token;
+      return fetch(SUPA_URL + "/rest/v1/clients?email=eq." + encodeURIComponent(user.email || loginEmail) + "&select=plan,name,status", {
+        headers: { apikey: SUPA_KEY, Authorization: "Bearer " + token }
+      }).then(function(r) { return r.json(); }).then(function(preCheck) {
+        if (!preCheck || preCheck.length === 0) {
+          return authAPI.signOut(token).catch(function(){}).then(function() {
+            throw new Error("Account not found. Please contact admin.");
+          });
+        }
+        if (preCheck[0].status === "disabled") {
+          return authAPI.signOut(token).catch(function(){}).then(function() {
+            throw new Error("Your account has been disabled. Please contact admin.");
+          });
+        }
+        return { d: d, user: user, token: token, clientRow: preCheck[0] };
+      });
+    }).then(function(result) {
+      var d = result.d, user = result.user, token = result.token;
       var meta = user.user_metadata || {};
-      var sess = { token: d.access_token, user: user };
-      // Check clients table for plan
+      var sess = { token: token, user: user };
       var prof = {
         email: user.email || loginEmail,
         name: meta.name || loginEmail.split("@")[0],
         role: meta.role || "client",
-        plan: meta.plan || "Basic"
+        plan: result.clientRow.plan || meta.plan || "Basic"
       };
-      // Load plan from clients table - critical for correct credits
-      fetch(SUPA_URL + "/rest/v1/clients?email=eq." + encodeURIComponent(user.email || loginEmail) + "&select=plan,name,status", {
-        headers: { apikey: SUPA_KEY, Authorization: "Bearer " + SUPA_KEY }
-      }).then(function(r) { return r.json(); }).then(function(data) {
-        var clientPlan = (data && data[0] && data[0].plan) ? data[0].plan : prof.plan;
-        var updatedProf = Object.assign({}, prof, { plan: clientPlan });
-        setProfile(updatedProf);
-        localStorage.setItem("pr_prof", JSON.stringify(updatedProf));
-        // Now load credits with correct plan
-        var limit = PLAN_LIMITS[clientPlan] || 5;
-        var isUnlim = clientPlan === "AgencyUnlimited";
-        fetch(SUPA_URL + "/rest/v1/credits?user_id=eq." + (user.id || ""), {
-          headers: { apikey: SUPA_KEY, Authorization: "Bearer " + SUPA_KEY }
-        }).then(function(r2) { return r2.json(); }).then(function(cd) {
-          if (cd && cd[0]) {
-            setCredits(Object.assign({}, cd[0], { plan: clientPlan, total_credits: limit, is_unlimited: isUnlim }));
-          } else {
-            setCredits({ plan: clientPlan, total_credits: limit, used_credits: 0, is_unlimited: isUnlim });
-          }
-        }).catch(function() {
-          setCredits({ plan: clientPlan, total_credits: limit, used_credits: 0, is_unlimited: isUnlim });
-        });
-      }).catch(function(){
-        setCredits({ plan: prof.plan, total_credits: PLAN_LIMITS[prof.plan] || 5, used_credits: 0, is_unlimited: false });
-      });
-      setSession(sess); setProfile(prof);
-      localStorage.setItem("pr_sess", JSON.stringify(sess));
+      setProfile(prof);
       localStorage.setItem("pr_prof", JSON.stringify(prof));
+      var limit = PLAN_LIMITS[prof.plan] || 5;
+      var isUnlim = prof.plan === "AgencyUnlimited";
+      fetch(SUPA_URL + "/rest/v1/credits?user_id=eq." + (user.id || ""), {
+        headers: { apikey: SUPA_KEY, Authorization: "Bearer " + token }
+      }).then(function(r2) { return r2.json(); }).then(function(cd) {
+        if (cd && cd[0]) {
+          setCredits(Object.assign({}, cd[0], { plan: prof.plan, total_credits: limit, is_unlimited: isUnlim }));
+        } else {
+          setCredits({ plan: prof.plan, total_credits: limit, used_credits: 0, is_unlimited: isUnlim });
+        }
+      }).catch(function() {
+        setCredits({ plan: prof.plan, total_credits: limit, used_credits: 0, is_unlimited: isUnlim });
+      });
+      setSession(sess);
+      localStorage.setItem("pr_sess", JSON.stringify(sess));
       setView("generate");
     }).catch(function(e) { setAuthError(e.message || "Login failed"); }).finally(function() { setAuthLoading(false); });
-  }
-
-  function handleRegister() {
-    if (!regName || !regEmail || !regPw) { setAuthError("Please fill all fields."); return; }
-    setAuthLoading(true); setAuthError("");
-    authAPI.signUp(regEmail, regPw, regName).then(function() {
-      setAuthSuccess("Account created! Please verify your email then login.");
-      setAuthTab("login"); setLoginEmail(regEmail);
-    }).catch(function(e) { setAuthError(e.message); }).finally(function() { setAuthLoading(false); });
   }
 
   function handleLogout() {
@@ -723,7 +718,6 @@ export default function App() {
     localStorage.removeItem("pr_sess"); localStorage.removeItem("pr_prof");
     setPosts([]); setGenerated(null); setInvoices([]);
     setLoginEmail(""); setLoginPw("");
-    setRegName(""); setRegEmail(""); setRegPw("");
   }
 
   function loadPosts() {
@@ -738,7 +732,7 @@ export default function App() {
   }, [view, session]);
 
   function loadInvoices() {
-    dbAPI.select("invoices", "", SUPA_KEY).then(function(data) {
+    dbAPI.select("invoices", "", authToken()).then(function(data) {
       var mapped = data.map(function(r) {
         var svcs = [];
         try { svcs = typeof r.services === "string" ? JSON.parse(r.services) : (r.services || []); } catch(e) {}
@@ -767,7 +761,7 @@ export default function App() {
     var userEmail = session.user.email || "";
     // Always fetch latest plan from clients table
     fetch(SUPA_URL + "/rest/v1/clients?email=eq." + encodeURIComponent(userEmail) + "&select=plan", {
-      headers: { apikey: SUPA_KEY, Authorization: "Bearer " + SUPA_KEY }
+      headers: { apikey: SUPA_KEY, Authorization: "Bearer " + authToken() }
     }).then(function(r) { return r.json(); }).then(function(cd) {
       var latestPlan = (cd && cd[0] && cd[0].plan) ? cd[0].plan : ((profile && profile.plan) || "Basic");
       if (latestPlan !== (profile && profile.plan)) {
@@ -784,12 +778,12 @@ export default function App() {
   function _loadCreditsWithPlan(userId, plan, userEmail) {
     var limit = PLAN_LIMITS[plan] || 5;
     var isUnlim = plan === "AgencyUnlimited";
-    dbAPI.select("credits", "user_id=eq." + userId, SUPA_KEY).then(function(data) {
+    dbAPI.select("credits", "user_id=eq." + userId, authToken()).then(function(data) {
       if (data && data[0]) {
         var rec = Object.assign({}, data[0], { plan: plan, total_credits: limit, is_unlimited: isUnlim, email: userEmail });
         setCredits(rec);
         // Update DB with correct plan/limits and email (so admin can look up usage by email)
-        dbAPI.update("credits", "user_id=eq." + userId, { plan: plan, total_credits: limit, is_unlimited: isUnlim, email: userEmail }, SUPA_KEY).catch(function(){});
+        dbAPI.update("credits", "user_id=eq." + userId, { plan: plan, total_credits: limit, is_unlimited: isUnlim, email: userEmail }, authToken()).catch(function(){});
       } else {
         var rec = {
           user_id: userId, plan: plan, total_credits: limit,
@@ -797,7 +791,7 @@ export default function App() {
           reset_date: new Date(new Date().getFullYear(), new Date().getMonth() + 1, 1).toISOString().split("T")[0],
           created_at: new Date().toISOString(),
         };
-        dbAPI.insert("credits", rec, SUPA_KEY).then(function(d) {
+        dbAPI.insert("credits", rec, authToken()).then(function(d) {
           setCredits(d[0] || rec);
         }).catch(function() { setCredits(rec); });
       }
@@ -835,7 +829,7 @@ export default function App() {
       var updated = Object.assign({}, credits, { used_credits: newUsed });
       setCredits(updated);
       if (session && session.user) {
-        dbAPI.update("credits", "user_id=eq." + session.user.id, { used_credits: newUsed }, SUPA_KEY).catch(function(){});
+        dbAPI.update("credits", "user_id=eq." + session.user.id, { used_credits: newUsed }, authToken()).catch(function(){});
       }
     }
     return true;
@@ -845,8 +839,8 @@ export default function App() {
     if (!session || !isAdmin) return;
     setClientsLoading(true);
     Promise.all([
-      dbAPI.select("clients", "", SUPA_KEY),
-      dbAPI.select("credits", "", SUPA_KEY).catch(function() { return []; })
+      dbAPI.select("clients", "", authToken()),
+      dbAPI.select("credits", "", authToken()).catch(function() { return []; })
     ]).then(function(results) {
       var clientsData = results[0];
       var creditsData = results[1] || [];
@@ -928,19 +922,14 @@ export default function App() {
       plan: newClient.plan,
       status: "active",
       created_at: new Date().toISOString(),
-    }, SUPA_KEY).then(function(d) {
+    }, authToken()).then(function(d) {
       var newC = d[0] || { id: Date.now(), name: newClient.name, email: newClient.email, plan: newClient.plan, status: "active", created_at: new Date().toISOString() };
       setClients(function(prev) { return [newC].concat(prev); });
       notify("Client added! Share the app link with them.");
       setNewClient({ name: "", email: "", password: "", plan: "Basic" });
       setShowAddClient(false);
     }).catch(function(e) {
-      // Fallback: add locally
-      var newC = { id: Date.now(), name: newClient.name, email: newClient.email, plan: newClient.plan, status: "active", created_at: new Date().toISOString(), password: newClient.password };
-      setClients(function(prev) { return [newC].concat(prev); });
-      notify("Client add ho gaya!");
-      setNewClient({ name: "", email: "", password: "", plan: "Basic" });
-      setShowAddClient(false);
+      notify("Add client failed: " + e.message, true);
     }).finally(function() { setAddingClient(false); });
   }
 
@@ -950,7 +939,7 @@ export default function App() {
     if (editClient.newPassword && editClient.newPassword.length >= 6) {
       updateData.password = editClient.newPassword;
     }
-    dbAPI.update("clients", "id=eq." + editClient.id, updateData, SUPA_KEY).then(function() {
+    dbAPI.update("clients", "id=eq." + editClient.id, updateData, authToken()).then(function() {
       setClients(function(prev) {
         return prev.map(function(c) { return c.id === editClient.id ? Object.assign({}, c, updateData) : c; });
       });
@@ -958,13 +947,7 @@ export default function App() {
       setShowEditModal(false);
       setEditClient(null);
     }).catch(function(e) {
-      // Update locally anyway
-      setClients(function(prev) {
-        return prev.map(function(c) { return c.id === editClient.id ? Object.assign({}, c, updateData) : c; });
-      });
-      notify("Client updated successfully!");
-      setShowEditModal(false);
-      setEditClient(null);
+      notify("Update failed: " + e.message, true);
     });
   }
 
@@ -972,7 +955,7 @@ export default function App() {
     if (!window.confirm("Are you sure you want to delete this client?")) return;
     fetch(SUPA_URL + "/rest/v1/clients?id=eq." + clientId, {
       method: "DELETE",
-      headers: { apikey: SUPA_KEY, Authorization: "Bearer " + SUPA_KEY }
+      headers: { apikey: SUPA_KEY, Authorization: "Bearer " + authToken() }
     }).then(function(r) {
       if (!r.ok) throw new Error("Delete failed");
       setClients(function(prev) { return prev.filter(function(c) { return c.id !== clientId; }); });
@@ -989,19 +972,16 @@ export default function App() {
     // Update in Supabase
     fetch(SUPA_URL + "/rest/v1/clients?id=eq." + clientId, {
       method: "PATCH",
-      headers: { apikey: SUPA_KEY, Authorization: "Bearer " + SUPA_KEY, "Content-Type": "application/json", Prefer: "return=representation" },
+      headers: { apikey: SUPA_KEY, Authorization: "Bearer " + authToken(), "Content-Type": "application/json", Prefer: "return=representation" },
       body: JSON.stringify({ status: newStatus })
-    }).then(function() {
+    }).then(function(r) {
+      if (!r.ok) throw new Error("Status update failed");
       setClients(function(prev) {
         return prev.map(function(c) { return c.id === clientId ? Object.assign({}, c, { status: newStatus }) : c; });
       });
       notify(newStatus === "active" ? "Client enabled!" : "Client disabled! They cannot login now.");
     }).catch(function(e) {
-      // Update locally even if DB fails
-      setClients(function(prev) {
-        return prev.map(function(c) { return c.id === clientId ? Object.assign({}, c, { status: newStatus }) : c; });
-      });
-      notify(newStatus === "active" ? "Client enabled!" : "Client disabled!");
+      notify("Update failed: " + e.message, true);
     });
   }
 
@@ -1051,14 +1031,13 @@ export default function App() {
       notes: newInvoice.notes || "",
       created_at: new Date().toISOString(),
     };
-    dbAPI.insert("invoices", rec, SUPA_KEY).then(function(d) {
+    dbAPI.insert("invoices", rec, authToken()).then(function(d) {
       var saved = d[0] || rec;
       var fullInv = Object.assign({}, inv, { id: saved.id || inv.id });
       setInvoices(function(prev) { return [fullInv].concat(prev); });
       notify("Invoice created and saved!");
-    }).catch(function() {
-      setInvoices(function(prev) { return [inv].concat(prev); });
-      notify("Invoice created!");
+    }).catch(function(e) {
+      notify("Invoice creation failed: " + e.message, true);
     });
     setNewInvoice({ customer: { name: "", phone: "", company: "", whatsapp: "" }, services: [{ name: "PostRank AI", qty: 1, price: 25000 }], dueDate: "", notes: "", status: "pending" });
     setShowInvoiceModal(false);
@@ -1068,7 +1047,7 @@ export default function App() {
     if (!window.confirm("Delete this invoice?")) return;
     fetch(SUPA_URL + "/rest/v1/invoices?id=eq." + id, {
       method: "DELETE",
-      headers: { apikey: SUPA_KEY, Authorization: "Bearer " + SUPA_KEY }
+      headers: { apikey: SUPA_KEY, Authorization: "Bearer " + authToken() }
     }).then(function(r) {
       if (!r.ok) throw new Error("Delete failed");
       setInvoices(function(prev) { return prev.filter(function(i) { return i.id !== id; }); });
@@ -1081,11 +1060,15 @@ export default function App() {
   function handleStatusChange(id, status) {
     fetch(SUPA_URL + "/rest/v1/invoices?id=eq." + id, {
       method: "PATCH",
-      headers: { apikey: SUPA_KEY, Authorization: "Bearer " + SUPA_KEY, "Content-Type": "application/json" },
+      headers: { apikey: SUPA_KEY, Authorization: "Bearer " + authToken(), "Content-Type": "application/json" },
       body: JSON.stringify({ status: status })
-    }).catch(function(){});
-    setInvoices(function(prev) { return prev.map(function(i) { return i.id === id ? Object.assign({}, i, { status: status }) : i; }); });
-    notify("Status updated successfully!");
+    }).then(function(r) {
+      if (!r.ok) throw new Error("Status update failed");
+      setInvoices(function(prev) { return prev.map(function(i) { return i.id === id ? Object.assign({}, i, { status: status }) : i; }); });
+      notify("Status updated successfully!");
+    }).catch(function(e) {
+      notify("Status update failed: " + e.message, true);
+    });
   }
 
   function sendWhatsApp(invoice, isReminder) {
@@ -1604,9 +1587,12 @@ export default function App() {
                 React.createElement("button", { onClick: function() {
                   var np = window.prompt("Select plan:\n0. Demo (5 credits - Free Trial)\n1. Basic (50 credits)\n2. Pro (250 credits)\n3. Agency (1500 credits)\n4. AgencyUnlimited (Unlimited)\n\nType exactly: Demo, Basic, Pro, Agency, or AgencyUnlimited", c.plan || "Basic");
                   if (np && ["Demo","Basic","Pro","Agency","AgencyUnlimited"].indexOf(np) !== -1) {
-                    dbAPI.update("clients", "id=eq." + c.id, { plan: np }, SUPA_KEY).catch(function(){});
-                    setClients(function(prev) { return prev.map(function(x) { return x.id === c.id ? Object.assign({}, x, { plan: np }) : x; }); });
-                    notify("Plan updated to: " + np);
+                    dbAPI.update("clients", "id=eq." + c.id, { plan: np }, authToken()).then(function() {
+                      setClients(function(prev) { return prev.map(function(x) { return x.id === c.id ? Object.assign({}, x, { plan: np }) : x; }); });
+                      notify("Plan updated to: " + np);
+                    }).catch(function(e) {
+                      notify("Plan update failed: " + e.message, true);
+                    });
                   }
                 }, style: { border: "none", borderRadius: 6, padding: "5px 10px", fontSize: 11, cursor: "pointer", fontWeight: 600, background: "#fef3c7", color: "#d97706" } }, "Plan"),
                 c.used_credits !== null && c.used_credits !== undefined ? React.createElement("button", { onClick: function() {
@@ -1615,7 +1601,7 @@ export default function App() {
                   notify("Resetting...");
                   fetch(SUPA_URL + "/rest/v1/credits?email=eq." + encodeURIComponent(c.email), {
                     method: "PATCH",
-                    headers: { apikey: SUPA_KEY, Authorization: "Bearer " + SUPA_KEY, "Content-Type": "application/json", Prefer: "return=representation" },
+                    headers: { apikey: SUPA_KEY, Authorization: "Bearer " + authToken(), "Content-Type": "application/json", Prefer: "return=representation" },
                     body: JSON.stringify({ used_credits: 0, reset_date: nextReset })
                   }).then(function(r) {
                     if (!r.ok) { return r.text().then(function(t) { throw new Error("HTTP " + r.status + ": " + t); }); }
