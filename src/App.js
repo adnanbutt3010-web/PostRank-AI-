@@ -54,6 +54,16 @@ const authAPI = {
       headers: { apikey: SUPA_KEY, Authorization: "Bearer " + token },
     });
   },
+  async refreshSession(refreshToken) {
+    const r = await fetch(SUPA_URL + "/auth/v1/token?grant_type=refresh_token", {
+      method: "POST",
+      headers: { apikey: SUPA_KEY, "Content-Type": "application/json" },
+      body: JSON.stringify({ refresh_token: refreshToken }),
+    });
+    const d = await r.json();
+    if (d.error) throw new Error(d.error.message || "Session refresh failed");
+    return d;
+  },
 };
 
 const adminAPI = {
@@ -635,6 +645,58 @@ export default function App() {
     return (session && session.token) ? session.token : SUPA_KEY;
   }
 
+  // Checks if an error message indicates an expired/invalid session token.
+  // If so, logs the user out and shows a clear message instead of letting every
+  // subsequent action silently fail with a confusing "JWT expired" error.
+  function handleAuthExpiry(errMessage) {
+    var msg = (errMessage || "").toLowerCase();
+    if (msg.indexOf("jwt expired") !== -1 || msg.indexOf("invalid jwt") !== -1 || msg.indexOf("pgrst301") !== -1 || msg.indexOf("pgrst303") !== -1) {
+      // Try a silent refresh first - if it succeeds the user stays logged in and can just retry their action.
+      if (session && session.refreshToken) {
+        authAPI.refreshSession(session.refreshToken).then(function(d) {
+          if (d && d.access_token) {
+            var updatedSess = Object.assign({}, session, { token: d.access_token, refreshToken: d.refresh_token || session.refreshToken });
+            setSession(updatedSess);
+            localStorage.setItem("pr_sess", JSON.stringify(updatedSess));
+            notify("Session refreshed - please try that action again.");
+          } else {
+            forceLogoutExpired();
+          }
+        }).catch(function() { forceLogoutExpired(); });
+      } else {
+        forceLogoutExpired();
+      }
+      return true;
+    }
+    return false;
+  }
+
+  function forceLogoutExpired() {
+    notify("Your session expired. Please log in again.", true);
+    setSession(null); setProfile(null); setCredits(null);
+    localStorage.removeItem("pr_sess"); localStorage.removeItem("pr_prof");
+    setPosts([]); setGenerated(null); setInvoices([]); setClients([]);
+  }
+
+  // Proactively refresh the access token every 45 minutes (Supabase tokens default to 1hr expiry)
+  // so the session never goes stale while the app is open.
+  useEffect(function() {
+    if (!session || !session.refreshToken) return;
+    var interval = setInterval(function() {
+      authAPI.refreshSession(session.refreshToken).then(function(d) {
+        if (d && d.access_token) {
+          setSession(function(prev) {
+            if (!prev) return prev;
+            var updated = Object.assign({}, prev, { token: d.access_token, refreshToken: d.refresh_token || prev.refreshToken });
+            localStorage.setItem("pr_sess", JSON.stringify(updated));
+            return updated;
+          });
+        }
+      }).catch(function() { /* will be caught on next real request if it actually expired */ });
+    }, 45 * 60 * 1000);
+    return function() { clearInterval(interval); };
+  }, [session && session.refreshToken]);
+
   function handleLogin() {
     if (!loginEmail || !loginPw) { setAuthError("Username/Please enter email and password."); return; }
     setAuthLoading(true); setAuthError("");
@@ -646,7 +708,7 @@ export default function App() {
     if (isAdminAttempt) {
       authAPI.signIn(effectiveEmail, loginPw).then(function(d) {
         if (!d || !d.access_token) throw new Error("Login failed - check email/password");
-        var adminSess = { token: d.access_token, user: d.user || { id: "admin", email: ADMIN_EMAIL } };
+        var adminSess = { token: d.access_token, refreshToken: d.refresh_token, user: d.user || { id: "admin", email: ADMIN_EMAIL } };
         var adminProf = { email: ADMIN_EMAIL, name: "Admin", role: "admin", plan: "Agency" };
         setSession(adminSess); setProfile(adminProf);
         localStorage.setItem("pr_sess", JSON.stringify(adminSess));
@@ -684,7 +746,7 @@ export default function App() {
     }).then(function(result) {
       var d = result.d, user = result.user, token = result.token;
       var meta = user.user_metadata || {};
-      var sess = { token: token, user: user };
+      var sess = { token: token, refreshToken: d.refresh_token, user: user };
       var prof = {
         email: user.email || loginEmail,
         name: meta.name || loginEmail.split("@")[0],
@@ -748,7 +810,7 @@ export default function App() {
         };
       });
       setInvoices(mapped);
-    }).catch(function() {});
+    }).catch(function(e) { handleAuthExpiry(e.message); });
   }
 
   useEffect(function() {
@@ -854,8 +916,8 @@ export default function App() {
         });
       });
       setClients(merged);
-    }).catch(function() {
-      setClients([]);
+    }).catch(function(e) {
+      if (!handleAuthExpiry(e.message)) setClients([]);
     }).finally(function() { setClientsLoading(false); });
   }
 
@@ -929,7 +991,7 @@ export default function App() {
       setNewClient({ name: "", email: "", password: "", plan: "Basic" });
       setShowAddClient(false);
     }).catch(function(e) {
-      notify("Add client failed: " + e.message, true);
+      if (!handleAuthExpiry(e.message)) notify("Add client failed: " + e.message, true);
     }).finally(function() { setAddingClient(false); });
   }
 
@@ -947,7 +1009,7 @@ export default function App() {
       setShowEditModal(false);
       setEditClient(null);
     }).catch(function(e) {
-      notify("Update failed: " + e.message, true);
+      if (!handleAuthExpiry(e.message)) notify("Update failed: " + e.message, true);
     });
   }
 
@@ -957,11 +1019,11 @@ export default function App() {
       method: "DELETE",
       headers: { apikey: SUPA_KEY, Authorization: "Bearer " + authToken() }
     }).then(function(r) {
-      if (!r.ok) throw new Error("Delete failed");
+      if (!r.ok) return r.text().then(function(t) { throw new Error(t); });
       setClients(function(prev) { return prev.filter(function(c) { return c.id !== clientId; }); });
       notify("Client delete ho gaya!");
     }).catch(function(e) {
-      notify("Delete failed: " + e.message, true);
+      if (!handleAuthExpiry(e.message)) notify("Delete failed: " + e.message, true);
     });
   }
 
@@ -975,13 +1037,13 @@ export default function App() {
       headers: { apikey: SUPA_KEY, Authorization: "Bearer " + authToken(), "Content-Type": "application/json", Prefer: "return=representation" },
       body: JSON.stringify({ status: newStatus })
     }).then(function(r) {
-      if (!r.ok) throw new Error("Status update failed");
+      if (!r.ok) return r.text().then(function(t) { throw new Error(t); });
       setClients(function(prev) {
         return prev.map(function(c) { return c.id === clientId ? Object.assign({}, c, { status: newStatus }) : c; });
       });
       notify(newStatus === "active" ? "Client enabled!" : "Client disabled! They cannot login now.");
     }).catch(function(e) {
-      notify("Update failed: " + e.message, true);
+      if (!handleAuthExpiry(e.message)) notify("Update failed: " + e.message, true);
     });
   }
 
