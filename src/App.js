@@ -678,24 +678,54 @@ export default function App() {
     setPosts([]); setGenerated(null); setInvoices([]); setClients([]);
   }
 
-  // Proactively refresh the access token every 45 minutes (Supabase tokens default to 1hr expiry)
-  // so the session never goes stale while the app is open.
+  // Auto-logout after 30 minutes of inactivity.
+  // The timer resets on any user activity (click, keypress, scroll, mousemove).
+  // Also keep the token refresh so the session stays valid during active use.
   useEffect(function() {
-    if (!session || !session.refreshToken) return;
-    var interval = setInterval(function() {
-      authAPI.refreshSession(session.refreshToken).then(function(d) {
-        if (d && d.access_token) {
-          setSession(function(prev) {
-            if (!prev) return prev;
-            var updated = Object.assign({}, prev, { token: d.access_token, refreshToken: d.refresh_token || prev.refreshToken });
-            localStorage.setItem("pr_sess", JSON.stringify(updated));
-            return updated;
-          });
-        }
-      }).catch(function() { /* will be caught on next real request if it actually expired */ });
-    }, 45 * 60 * 1000);
-    return function() { clearInterval(interval); };
-  }, [session && session.refreshToken]);
+    if (!session) return;
+    var TIMEOUT_MS = 30 * 60 * 1000; // 30 minutes
+    var timer;
+
+    function resetTimer() {
+      clearTimeout(timer);
+      timer = setTimeout(function() {
+        notify("Auto-logged out due to inactivity.", true);
+        setTimeout(function() {
+          if (session && session.token) authAPI.signOut(session.token).catch(function(){});
+          setSession(null); setProfile(null); setCredits(null);
+          localStorage.removeItem("pr_sess"); localStorage.removeItem("pr_prof");
+          setPosts([]); setGenerated(null); setInvoices([]); setClients([]);
+        }, 1000);
+      }, TIMEOUT_MS);
+    }
+
+    var events = ["click", "keypress", "scroll", "mousemove", "touchstart"];
+    events.forEach(function(ev) { window.addEventListener(ev, resetTimer, { passive: true }); });
+    resetTimer(); // start the timer
+
+    // Also refresh token every 25 minutes during active use so it doesn't expire mid-session
+    var refreshInterval;
+    if (session.refreshToken) {
+      refreshInterval = setInterval(function() {
+        authAPI.refreshSession(session.refreshToken).then(function(d) {
+          if (d && d.access_token) {
+            setSession(function(prev) {
+              if (!prev) return prev;
+              var updated = Object.assign({}, prev, { token: d.access_token, refreshToken: d.refresh_token || prev.refreshToken });
+              localStorage.setItem("pr_sess", JSON.stringify(updated));
+              return updated;
+            });
+          }
+        }).catch(function() {});
+      }, 25 * 60 * 1000);
+    }
+
+    return function() {
+      clearTimeout(timer);
+      if (refreshInterval) clearInterval(refreshInterval);
+      events.forEach(function(ev) { window.removeEventListener(ev, resetTimer); });
+    };
+  }, [!!session]);
 
   function handleLogin() {
     if (!loginEmail || !loginPw) { setAuthError("Username/Please enter email and password."); return; }
